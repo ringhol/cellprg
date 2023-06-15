@@ -4,11 +4,12 @@
 
 #pragma once
 
-
 class CCellProjectView : public CView
 {
 private:
-	CImage image;
+	CImage *image;
+	CImage* backup;//<原图的一份拷贝
+	CPoint nowPoint;
 protected: // 仅从序列化创建
 	CCellProjectView() noexcept;
 	DECLARE_DYNCREATE(CCellProjectView)
@@ -19,7 +20,7 @@ public:
 
 // 操作
 public:
-
+	void PrepareProcessing();
 // 重写
 public:
 	virtual void OnDraw(CDC* pDC);  // 重写以绘制该视图
@@ -44,6 +45,12 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnFileOpen();
+	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnCellDetect();
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg void OnRecoverImage();
+	afx_msg void OnMaybeMark2Mark();
+	afx_msg void OnGetEdgeInfomation();
 };
 
 #ifndef _DEBUG  // CellProjectView.cpp 中的调试版本

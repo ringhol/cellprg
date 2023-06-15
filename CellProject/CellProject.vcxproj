@@ -187,6 +187,7 @@
     <ClInclude Include="CellProjectDoc.h" />
     <ClInclude Include="CellProjectView.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="ImgProcesor.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
@@ -196,6 +197,7 @@
     <ClCompile Include="CellProject.cpp" />
     <ClCompile Include="CellProjectDoc.cpp" />
     <ClCompile Include="CellProjectView.cpp" />
+    <ClCompile Include="ImgProcesor.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

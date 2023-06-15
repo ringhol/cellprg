@@ -3,10 +3,10 @@
 //
 
 #pragma once
-
+class CCellProjectView;
 class CMainFrame : public CFrameWnd
 {
-	
+friend CCellProjectView;
 protected: // 仅从序列化创建
 	CMainFrame() noexcept;
 	DECLARE_DYNCREATE(CMainFrame)
@@ -37,6 +37,7 @@ protected:  // 控件条嵌入成员
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	DECLARE_MESSAGE_MAP()
+
 
 };
 
