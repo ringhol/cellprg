@@ -21,9 +21,8 @@ HSI::HSI(const Rgb& rgb) {
 }
 
 
-bool ImgProcesor::copyImage(const CImage& srcImage, CImage& destImage)
-{
-	int i, j;//循环变量
+bool ImgProcesor::copyImage(const CImage& srcImage, CImage& destImage){
+	int i;//循环变量
 	if (srcImage.IsNull())
 		return FALSE;
 	//源图像参数
@@ -33,26 +32,22 @@ bool ImgProcesor::copyImage(const CImage& srcImage, CImage& destImage)
 	int srcHeight = srcImage.GetHeight();
 	int srcPitch = srcImage.GetPitch();
 	//销毁原有图像
-	if (!destImage.IsNull())
-	{
+	if (!destImage.IsNull()){
 		destImage.Destroy();
 	}
 	//创建新图像
-	if (srcBitsCount == 32)   //支持alpha通道
-	{
+	//支持alpha通道
+	if (srcBitsCount == 32){
 		destImage.Create(srcWidth, srcHeight, srcBitsCount, 1);
 	}
-	else
-	{
+	else{
 		destImage.Create(srcWidth, srcHeight, srcBitsCount, 0);
 	}
 	//加载调色板
-	if (srcBitsCount <= 8 && srcImage.IsIndexed())//需要调色板
-	{
+	if (srcBitsCount <= 8 && srcImage.IsIndexed()){
 		RGBQUAD pal[256];
 		int nColors = srcImage.GetMaxColorTableEntries();
-		if (nColors > 0)
-		{
+		if (nColors > 0){
 			srcImage.GetColorTable(0, nColors, pal);
 			destImage.SetColorTable(0, nColors, pal);//复制调色板程序
 		}
@@ -61,8 +56,7 @@ bool ImgProcesor::copyImage(const CImage& srcImage, CImage& destImage)
 	BYTE* destPtr = (BYTE*)destImage.GetBits();
 	int destPitch = destImage.GetPitch();
 	//复制图像数据
-	for (i = 0; i < srcHeight; i++)
-	{
+	for (i = 0; i < srcHeight; i++){
 		memcpy(destPtr + i * destPitch, srcPtr + i * srcPitch, abs(srcPitch));
 	}
 	return TRUE;
@@ -96,10 +90,11 @@ void ImgProcesor::maybemark2mark(CImage* image) {
 	}
 }
 
-void ImgProcesor::getEdgeInfomation(CImage* image,const CImage*originImage) {
+void ImgProcesor::getEdgeInfomation(CImage* image, const CImage* originImage) {
 	const int edgeDoor = 45;
 	CImage oriImg;
 	copyImage(*originImage, oriImg);
+	int lineBytes = image->GetBPP() / 8 * image->GetWidth();
 	//get edge information
 	for (int i = 0 + 1; i < image->GetHeight() - 1; i++) {//boarder no edge
 		for (int j = 0 + 1; j < image->GetWidth() - 1; j++) {
@@ -109,14 +104,12 @@ void ImgProcesor::getEdgeInfomation(CImage* image,const CImage*originImage) {
 				BYTE* lpSrc = (BYTE*)oriImg.GetPixelAddress(j, i);
 				for (int m = -1; m < 2; m++)                    //3*3矩阵
 					for (int n = -1; n < 2; n++) {
-						unsigned char* lpSrc1 = lpSrc - image->GetBPP()/8*image->GetWidth() * m + 3 * n;
+						unsigned char* lpSrc1 = lpSrc - lineBytes * m + 3 * n;
 						pixel[(m + 1) * 3 + n + 1] = ((int)*lpSrc1 + *(lpSrc1 + 1) + *(lpSrc1 + 2)) / 3;      //可修改
 					}
 				//Sobel
-				double tmp1 =
-					pixel[0] + 2 * pixel[1] + pixel[2] - pixel[6] - 2 * pixel[7] - pixel[8];
-				double tmp2 =
-					pixel[0] + 2 * pixel[3] + pixel[6] - pixel[2] - 2 * pixel[5] - pixel[8];
+				double tmp1 = pixel[0] + 2 * pixel[1] + pixel[2] - pixel[6] - 2 * pixel[7] - pixel[8];
+				double tmp2 = pixel[0] + 2 * pixel[3] + pixel[6] - pixel[2] - 2 * pixel[5] - pixel[8];
 				double edge = sqrt(tmp1 * tmp1 + tmp2 * tmp2);
 				if (edge > edgeDoor) {
 					*(lpDst + 1) = 255;//edge
@@ -125,15 +118,78 @@ void ImgProcesor::getEdgeInfomation(CImage* image,const CImage*originImage) {
 		}
 	}
 
+	//滤波
+	const int M = 5;  //5*5窗口滤波
+	bool bdelete;
+	//filter 
+	for (int i = 0 + M; i < image->GetHeight() - M; i++){
+		// 针对每行图像每列进行操作
+		for (int j = 0 + M; j < image->GetWidth() - M; j++){
+			// 指向源DIB第i行，第j个象素的指针
+			BYTE* lpDst = (BYTE*)image->GetPixelAddress(j, i);
+			//edge 
+			if (*(lpDst + 1) == 255){
+				bdelete = true;
+				for (int m = -M; m <= M; m++)
+					for (int n = -M; n <= M; n++){
+						if (m == -M || m == M || n == -M || n == M) {
+							//noMark && no Edge
+							if (*(lpDst + lineBytes * m + n * 3) || (*(lpDst + lineBytes * m + n * 3 + 1) == 255)){
+								bdelete = false;
+								m = M + 1; n = M + 1;//out
+							}
+						}
+					}
+				if (bdelete)
+					*(lpDst + 1) = 0;//delete edge
+			}
+		}
+	}
+
 }
 
+void ImgProcesor::twovalue(CImage** image){
+	// TODO: 在此添加命令处理程序代码
+		// 暂时分配内存，以保存新图像
+		CImage *newImage = new CImage;
+		newImage->Create((*image)->GetWidth(), (*image)->GetHeight(), 8);
+		// 在调色板中初始化256种颜色值
+		RGBQUAD colors[256];
+		for (int i = 0; i < 256; i++){
+			colors[i].rgbBlue = i;
+			colors[i].rgbGreen = i;
+			colors[i].rgbRed = i;
+			colors[i].rgbReserved = 0;
+		}
+		// 将调色板赋值给图像
+		if (newImage->GetDC() != NULL){
+			::SetDIBColorTable(newImage->GetDC(), 0, 256, colors);
+			newImage->ReleaseDC();
+		}
+		for (int i = 0; i < (*image)->GetHeight(); i++) {
+			for (int j = 0; j < (*image)->GetWidth(); j++) {
+				BYTE* lpSrc = (BYTE*)(*image)->GetPixelAddress(j, i);
+				BYTE* lpDst = (BYTE*)newImage->GetPixelAddress(j, i);
+				BYTE v=0;
+				//Mark
+				if (*(lpSrc) == 0){
+					v = 0x80;
+					if (*(lpSrc + 1))v |= 0x70;//set edge
+				}
+				*lpDst = v;
+			}
+		}
+		CImage* tmp = *image;
+		*image = newImage;
+		delete tmp;
+		tmp = nullptr;
+}
 
-
-void ImgProcesor::markCell(CImage* image) {
+void ImgProcesor::markCell(CImage* image, CPoint start, CPoint end) {
 	int height = image->GetHeight();
 	int width = image->GetWidth();
-	for (int i = 0; i < width; i++) {
-		for (int j = 0; j < height; j++) {
+	for (int i = start.x; i < end.x; i++) {
+		for (int j = start.y; j < end.y; j++) {
 			BYTE* pByte = (BYTE*)image->GetPixelAddress(i, j);
 			Rgb rgb(pByte[2], pByte[1], pByte[0]);
 			//计算HSI

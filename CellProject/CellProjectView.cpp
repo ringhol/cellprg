@@ -31,10 +31,12 @@ BEGIN_MESSAGE_MAP(CCellProjectView, CView)
 	ON_COMMAND(ID_FILE_OPEN, &CCellProjectView::OnFileOpen)
 	ON_COMMAND(ID_32771, &CCellProjectView::OnCellDetect)
 	ON_WM_LBUTTONDOWN()
+	ON_WM_LBUTTONUP()
 	ON_WM_MOUSEMOVE()
 	ON_COMMAND(ID_32772, &CCellProjectView::OnRecoverImage)
 	ON_COMMAND(ID_32773, &CCellProjectView::OnMaybeMark2Mark)
 	ON_COMMAND(ID_32774, &CCellProjectView::OnGetEdgeInfomation)
+	ON_COMMAND(ID_32775, &CCellProjectView::OnTwoValue)
 END_MESSAGE_MAP()
 
 // CCellProjectView 构造/析构
@@ -53,14 +55,13 @@ CCellProjectView::CCellProjectView() noexcept
 	filename = pathname + L"\\data.bmp";
 	image->Load(filename);
 	ImgProcesor::copyImage(*image, *backup);
+	start_point.x = 0; start_point.y = 0;
+	end_point.x = image->GetWidth();
+	end_point.y = image->GetHeight();
 }
 
 CCellProjectView::~CCellProjectView()
 {
-	if (this->image != nullptr) {
-		delete image;
-		image = nullptr;
-	}
 	if (backup != nullptr) {
 		delete backup;
 		backup = nullptr;
@@ -92,19 +93,16 @@ void CCellProjectView::OnDraw(CDC* pDC)
 
 	// TODO: 在此处为本机数据添加绘制代码
 	//显示图片
-	if (image!=nullptr&&!image->IsNull())
-	{
+	if (image!=nullptr&&!image->IsNull()){
 		image->Draw(pDC->GetSafeHdc(), 0, 0);
 	}
-	//获取点击点的坐标以及rgb信息
-	if (nowPoint.x > 0 && nowPoint.y > 0) {
-		CString str;
-		COLORREF pixel = GetPixel(::GetDC(this->m_hWnd),nowPoint.x,nowPoint.y);
-		Rgb rgb(pixel);
-		HSI hsi(rgb);
-		str.Format(L"%d,%d;rgb(%d,%d,%d);HSI(%.3f,%.3f,%.3f)", nowPoint.x, nowPoint.y,rgb.r,rgb.g,rgb.b,hsi.H,hsi.S,hsi.I);
-		pDC->TextOutW(nowPoint.x,nowPoint.y, str);
-	}
+
+	auto prorect = CRect(start_point, end_point);
+	CPen pen;
+	pen.CreatePen(PS_DOT,1, RGB(255, 0, 0));
+	pDC->SelectObject(pen);
+	pDC->SelectObject(GetStockObject(NULL_BRUSH));
+	pDC->Rectangle(prorect);
 }
 
 
@@ -154,25 +152,27 @@ CCellProjectDoc* CCellProjectView::GetDocument() const // 非调试版本是内�
 void CCellProjectView::OnFileOpen()
 {
 		// TODO: 在此添加命令处理程序代码
+	CCellProjectDoc* pDoc = GetDocument();
 		CFileDialog dlg(TRUE, _T(".bmp"), _T("*.bmp"), OFN_HIDEREADONLY |
 			OFN_OVERWRITEPROMPT, _T("位图文件(*.bmp)|*.bmp|JPEG文件(*.jpg)|*.jpg||"));
 		if (dlg.DoModal() == IDOK)
 		{
-			if (image!=nullptr&&!image->IsNull())
+			if (pDoc->image !=nullptr&&!pDoc->image->IsNull())
 			{
-				image->Destroy();
-				delete image;
-				image = nullptr;
+				pDoc->image->Destroy();
+				delete pDoc->image;
+				pDoc->image = nullptr;
 			}
-			image = new CImage;
-			image->Load(dlg.GetPathName());
+			pDoc->image = new CImage;
+			pDoc->image->Load(dlg.GetPathName());
 			if (backup != nullptr) {
 				delete backup;
 				backup = nullptr;
 			}
+			image = pDoc->image;
 			backup = new CImage;
 			ImgProcesor::copyImage(*image,*backup);
-			Invalidate();
+			Invalidate(true);
 		}
 }
 
@@ -181,16 +181,33 @@ void CCellProjectView::OnCellDetect()
 {
 	// TODO: 在此添加命令处理程序代码
 	PrepareProcessing();
-	ImgProcesor::markCell(image);
-	Invalidate();
+	ImgProcesor::markCell(image,start_point,end_point);
+	Invalidate(true);
 }
 
 void CCellProjectView::OnLButtonDown(UINT nFlags, CPoint point) {
-	nowPoint = point;
-	Invalidate();
+	if (!is_draging) {
+		last_point = point;
+		is_draging = true;
+	}
 	CView::OnLButtonDown(nFlags, point);
 }
 
+void CCellProjectView::OnLButtonUp(UINT nFlags, CPoint point) {
+	is_draging = false;
+	start_point.x = min(last_point.x, point.x);
+	start_point.y = min(last_point.y, point.y);
+	end_point.x = max(last_point.x, point.x);
+	end_point.y = max(last_point.y, point.y);
+	if (start_point.x == end_point.x && start_point.y == end_point.y) {
+		start_point.y = 0;
+		start_point.x = 0;
+		end_point.x = image->GetWidth();
+		end_point.y = image->GetHeight();
+	}
+	Invalidate(true);
+	CView::OnLButtonUp(nFlags, point);
+}
 
 void CCellProjectView::OnMouseMove(UINT nFlags, CPoint point)
 {
@@ -211,20 +228,23 @@ void CCellProjectView::OnMouseMove(UINT nFlags, CPoint point)
 void CCellProjectView::OnRecoverImage()
 {
 	// TODO: 在此添加命令处理程序代码
+	CCellProjectDoc* pDoc = GetDocument();
 	PrepareProcessing();
-	delete image;
-	this->image = new CImage;
-	ImgProcesor::copyImage(*backup, *image);
-	Invalidate();
+	if (pDoc->image != nullptr) {
+		delete pDoc->image;
+	}
+	pDoc->image = new CImage;
+	ImgProcesor::copyImage(*backup, *pDoc->image);
+	image = pDoc->image;
+	Invalidate(true);
 }
 
 
-void CCellProjectView::OnMaybeMark2Mark()
-{
+void CCellProjectView::OnMaybeMark2Mark(){
 	// TODO: 在此添加命令处理程序代码
 	PrepareProcessing();
 	ImgProcesor::maybemark2mark(image);
-	Invalidate();
+	Invalidate(true);
 }
 
 
@@ -233,5 +253,15 @@ void CCellProjectView::OnGetEdgeInfomation()
 	// TODO: 在此添加命令处理程序代码
 	PrepareProcessing();
 	ImgProcesor::getEdgeInfomation(image, backup);
-	Invalidate();
+	Invalidate(true);
+}
+
+
+void CCellProjectView::OnTwoValue()
+{
+	// TODO: 在此添加命令处理程序代码
+	PrepareProcessing();
+	ImgProcesor::twovalue(&image);
+	GetDocument()->image = image;
+	Invalidate(true);
 }

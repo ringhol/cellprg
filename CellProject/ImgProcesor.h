@@ -30,7 +30,7 @@ public:
 	/// 标记图片中的细胞为红色，背景不变，可能是细胞的部分为蓝色
 	/// </summary>
 	/// <param name="image">待处理的图片</param>
-	static void markCell(CImage* image);
+	static void markCell(CImage* image,CPoint start,CPoint end);
 	/// <summary>
 	/// 拷贝一副图片
 	/// </summary>
@@ -50,5 +50,7 @@ public:
 	/// <param name="image">经过标注后的图片</param>
 	/// <param name="originImage">没有经过处理的原始图片</param>
 	static void getEdgeInfomation(CImage* image,const CImage*originImage);
+
+	static void twovalue(CImage** image);
 };
 

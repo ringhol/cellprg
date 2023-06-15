@@ -9,7 +9,10 @@ class CCellProjectView : public CView
 private:
 	CImage *image;
 	CImage* backup;//<原图的一份拷贝
-	CPoint nowPoint;
+	bool is_draging;
+	CPoint last_point;
+	CPoint start_point;
+	CPoint end_point;
 protected: // 仅从序列化创建
 	CCellProjectView() noexcept;
 	DECLARE_DYNCREATE(CCellProjectView)
@@ -46,11 +49,13 @@ protected:
 public:
 	afx_msg void OnFileOpen();
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnCellDetect();
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnRecoverImage();
 	afx_msg void OnMaybeMark2Mark();
 	afx_msg void OnGetEdgeInfomation();
+	afx_msg void OnTwoValue();
 };
 
 #ifndef _DEBUG  // CellProjectView.cpp 中的调试版本

@@ -31,11 +31,12 @@ END_MESSAGE_MAP()
 CCellProjectDoc::CCellProjectDoc() noexcept
 {
 	// TODO: 在此添加一次性构造代码
-
+	image = new CImage;
 }
 
 CCellProjectDoc::~CCellProjectDoc()
 {
+
 }
 
 BOOL CCellProjectDoc::OnNewDocument()
