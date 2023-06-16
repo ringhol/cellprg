@@ -37,6 +37,7 @@ BEGIN_MESSAGE_MAP(CCellProjectView, CView)
 	ON_COMMAND(ID_32773, &CCellProjectView::OnMaybeMark2Mark)
 	ON_COMMAND(ID_32774, &CCellProjectView::OnGetEdgeInfomation)
 	ON_COMMAND(ID_32775, &CCellProjectView::OnTwoValue)
+	ON_COMMAND(ID_32776, &CCellProjectView::OnFillHole)
 END_MESSAGE_MAP()
 
 // CCellProjectView 构造/析构
@@ -45,19 +46,8 @@ CCellProjectView::CCellProjectView() noexcept
 {
 	// TODO: 在此处添加构造代码
 	//程序运行时默认自动打开名为data.bmp的图片
-	image = new CImage;
 	backup = new CImage;
-	CString filename;
-	WCHAR strDirName[80];
-	GetCurrentDirectory(80, (LPWSTR)strDirName);
-	CString pathname;
-	pathname.Format(L"%s", strDirName);
-	filename = pathname + L"\\data.bmp";
-	image->Load(filename);
-	ImgProcesor::copyImage(*image, *backup);
-	start_point.x = 0; start_point.y = 0;
-	end_point.x = image->GetWidth();
-	end_point.y = image->GetHeight();
+	image = nullptr;
 }
 
 CCellProjectView::~CCellProjectView()
@@ -66,6 +56,7 @@ CCellProjectView::~CCellProjectView()
 		delete backup;
 		backup = nullptr;
 	}
+	image = nullptr;
 }
 
 BOOL CCellProjectView::PreCreateWindow(CREATESTRUCT& cs)
@@ -92,6 +83,14 @@ void CCellProjectView::OnDraw(CDC* pDC)
 		return;
 
 	// TODO: 在此处为本机数据添加绘制代码
+	if (!have_read_document) {
+		image = GetDocument()->image;
+		end_point.x = image->GetWidth();
+		end_point.y = image->GetHeight();
+		start_point.x = 0; start_point.y = 0;
+		ImgProcesor::copyImage(*image, *backup);
+		have_read_document = true;
+	}
 	//显示图片
 	if (image!=nullptr&&!image->IsNull()){
 		image->Draw(pDC->GetSafeHdc(), 0, 0);
@@ -197,8 +196,12 @@ void CCellProjectView::OnLButtonUp(UINT nFlags, CPoint point) {
 	is_draging = false;
 	start_point.x = min(last_point.x, point.x);
 	start_point.y = min(last_point.y, point.y);
+	start_point.x = min(start_point.x, image->GetWidth());
+	start_point.y = min(start_point.y, image->GetHeight());
 	end_point.x = max(last_point.x, point.x);
 	end_point.y = max(last_point.y, point.y);
+	end_point.x = min(end_point.x, image->GetWidth());
+	end_point.y = min(end_point.y, image->GetHeight());
 	if (start_point.x == end_point.x && start_point.y == end_point.y) {
 		start_point.y = 0;
 		start_point.x = 0;
@@ -227,9 +230,8 @@ void CCellProjectView::OnMouseMove(UINT nFlags, CPoint point)
 
 void CCellProjectView::OnRecoverImage()
 {
-	// TODO: 在此添加命令处理程序代码
-	CCellProjectDoc* pDoc = GetDocument();
 	PrepareProcessing();
+	CCellProjectDoc* pDoc = GetDocument();
 	if (pDoc->image != nullptr) {
 		delete pDoc->image;
 	}
@@ -241,7 +243,6 @@ void CCellProjectView::OnRecoverImage()
 
 
 void CCellProjectView::OnMaybeMark2Mark(){
-	// TODO: 在此添加命令处理程序代码
 	PrepareProcessing();
 	ImgProcesor::maybemark2mark(image);
 	Invalidate(true);
@@ -250,7 +251,6 @@ void CCellProjectView::OnMaybeMark2Mark(){
 
 void CCellProjectView::OnGetEdgeInfomation()
 {
-	// TODO: 在此添加命令处理程序代码
 	PrepareProcessing();
 	ImgProcesor::getEdgeInfomation(image, backup);
 	Invalidate(true);
@@ -259,9 +259,16 @@ void CCellProjectView::OnGetEdgeInfomation()
 
 void CCellProjectView::OnTwoValue()
 {
-	// TODO: 在此添加命令处理程序代码
 	PrepareProcessing();
 	ImgProcesor::twovalue(&image);
 	GetDocument()->image = image;
 	Invalidate(true);
+}
+
+
+void CCellProjectView::OnFillHole()
+{
+	PrepareProcessing();
+	ImgProcesor::fillHole(image);
+	Invalidate();
 }

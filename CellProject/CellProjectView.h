@@ -9,10 +9,12 @@ class CCellProjectView : public CView
 private:
 	CImage *image;
 	CImage* backup;//<原图的一份拷贝
-	bool is_draging;
+	bool is_draging{ false };
 	CPoint last_point;
 	CPoint start_point;
 	CPoint end_point;
+	bool have_read_document{ false };
+
 protected: // 仅从序列化创建
 	CCellProjectView() noexcept;
 	DECLARE_DYNCREATE(CCellProjectView)
@@ -56,6 +58,7 @@ public:
 	afx_msg void OnMaybeMark2Mark();
 	afx_msg void OnGetEdgeInfomation();
 	afx_msg void OnTwoValue();
+	afx_msg void OnFillHole();
 };
 
 #ifndef _DEBUG  // CellProjectView.cpp 中的调试版本

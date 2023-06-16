@@ -32,11 +32,21 @@ CCellProjectDoc::CCellProjectDoc() noexcept
 {
 	// TODO: 在此添加一次性构造代码
 	image = new CImage;
+	CString filename;
+	WCHAR strDirName[80];
+	GetCurrentDirectory(80, (LPWSTR)strDirName);
+	CString pathname;
+	pathname.Format(L"%s", strDirName);
+	filename = pathname + L"\\data.bmp";
+	image->Load(filename);
 }
 
 CCellProjectDoc::~CCellProjectDoc()
 {
-
+	if (image != nullptr) {
+		delete image;
+		image = nullptr;
+	}
 }
 
 BOOL CCellProjectDoc::OnNewDocument()

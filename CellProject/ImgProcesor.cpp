@@ -1,7 +1,8 @@
 #include "pch.h"
 #include "ImgProcesor.h"
 #include <math.h>
-
+#include <stack>
+#include <vector>
 HSI::HSI(COLORREF pixel) {
 	Rgb rgbval(pixel);
 	HSI::HSI(rgbval);
@@ -173,17 +174,20 @@ void ImgProcesor::twovalue(CImage** image){
 				BYTE v=0;
 				//Mark
 				if (*(lpSrc) == 0){
-					v = 0x80;
+					v = TWOVALUE_H;
 					if (*(lpSrc + 1))v |= 0x70;//set edge
+					else if (j == 0 || j == newImage->GetWidth() - 1 || i == 0 || i == newImage->GetHeight() - 1) {
+						v |= EDGEPOINT;
+					}
 				}
 				*lpDst = v;
 			}
 		}
-		CImage* tmp = *image;
+		delete *image;
 		*image = newImage;
-		delete tmp;
-		tmp = nullptr;
+		newImage->ReleaseDC();//这里不多调用一次的话delete的时候就会报错
 }
+
 
 void ImgProcesor::markCell(CImage* image, CPoint start, CPoint end) {
 	int height = image->GetHeight();
@@ -227,6 +231,99 @@ void ImgProcesor::markCell(CImage* image, CPoint start, CPoint end) {
 					pByte[2] = rgb.r; pByte[1] = 254; pByte[0] = rgb.b;
 				}
 			}
+		}
+	}
+}
+
+
+
+void ImgProcesor::fillHole(CImage* image){
+	//0x7X---edge
+	//0x8X---Mark--not edge
+	//0xfX--Mark --edge
+	//0xX1---visited
+	for (int i = 0 + 1; i < image->GetHeight() ; i++){
+		for (int j = 0 + 1; j < image->GetWidth() ; j++){
+			BYTE* lpSrc = (BYTE*)image->GetPixelAddress(j, i);
+			//if no-marked & no-visited
+			if (!(*lpSrc & MARK_VISITED)) {//未访问过的黑点
+				processFillHole(image,j, i);
+			}
+		}
+	}
+	//edge area back
+	//0xfX--Mark --edge
+	for (int i = 0; i < image->GetHeight(); i++){
+		for (int j = 0; j < image->GetWidth(); j++){
+			BYTE* lpSrc = (BYTE*)image->GetPixelAddress(j, i);
+			if (!(*lpSrc & MARKED))//非mark point
+				*lpSrc = 0;//删除访问标志
+			else if (*lpSrc & EDGEPOINT)//if marked & edge
+					*lpSrc = 0;
+		}
+	}
+}
+
+void ImgProcesor::processFillHole(CImage* image, int x, int y)
+{
+	using namespace std;
+	CPoint str;
+	stack<CPoint> s;
+	vector<CPoint> v;//v save for fill holes
+	const int MAX_HOLE = 100;
+	s.push(CPoint(x, y));
+	v.push_back(CPoint(x, y));
+	BYTE* lpSrc =  (BYTE*)image->GetPixelAddress(x, y);
+	*lpSrc |= VISITED;//vistied	
+	bool bBorder = false;
+	while (s.size()){
+		//Add new members to stack
+		//Above current pixel
+		lpSrc = (BYTE*)image->GetPixelAddress(x, y);
+		if (y > 0&&y<image->GetHeight()-1&& x > 0 && x < image->GetWidth()-1){
+			//if no-marked & no-visited
+			if (!(*(BYTE*)image->GetPixelAddress(x,y-1) & MARK_VISITED)){
+				s.push(CPoint(x, y - 1));
+				v.push_back(CPoint(x, y - 1));
+				*(BYTE*)image->GetPixelAddress(x, y - 1) |= VISITED;
+			}
+			if (!(*(BYTE*)image->GetPixelAddress(x, y + 1) & MARK_VISITED)) {
+				s.push(CPoint(x, y + 1));
+				v.push_back(CPoint(x, y + 1));
+				*(BYTE*)image->GetPixelAddress(x, y + 1) |= VISITED;
+			}
+			if (!(*(BYTE*)image->GetPixelAddress(x - 1, y) & MARK_VISITED)) {
+				s.push(CPoint(x - 1, y));
+				v.push_back(CPoint(x - 1, y));
+				*(BYTE*)image->GetPixelAddress(x - 1, y) |= VISITED;
+			}
+			if (!(*(BYTE*)image->GetPixelAddress(x + 1, y) & MARK_VISITED)) {
+				s.push(CPoint(x + 1, y));
+				v.push_back(CPoint(x + 1, y));
+				*(BYTE*)image->GetPixelAddress(x + 1, y) |= VISITED;
+			}
+		}
+		else bBorder = true;
+		//Retrieve current stack member
+		x = s.top().x;
+		y = s.top().y;
+		s.pop();
+	}
+	if (v.size() < MAX_HOLE && !bBorder){
+		//CString msg;
+		//msg.Format(_T("\n%d--(%d %d)"), v.size(), wd, ht);
+		////for see	
+		//if (v.size() > 50) {
+		//	Invalidate(true);
+		//	MessageBox(msg);
+		//}
+		//else
+		//	TRACE(msg);
+		for (UINT k = 0; k < v.size(); k++) {
+			x = v[k].x;
+			y = v[k].y;
+			lpSrc = (BYTE*)image->GetPixelAddress(x, y);
+			*lpSrc |= MARKED;
 		}
 	}
 }
