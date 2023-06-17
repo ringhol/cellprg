@@ -14,6 +14,8 @@ private:
 	CPoint start_point;
 	CPoint end_point;
 	bool have_read_document{ false };
+	int step{ 0 };
+
 
 protected: // 仅从序列化创建
 	CCellProjectView() noexcept;
@@ -59,6 +61,22 @@ public:
 	afx_msg void OnGetEdgeInfomation();
 	afx_msg void OnTwoValue();
 	afx_msg void OnFillHole();
+	afx_msg void OnUpdateCellDetectUI(CCmdUI* pCmdUI);
+	afx_msg void OnUpdateMaybeMark2MarkUI(CCmdUI* pCmdUI);
+	afx_msg void OnUpdateGetEdgeInfomationUI(CCmdUI* pCmdUI);
+	afx_msg void OnUpdateTwoValueUI(CCmdUI* pCmdUI);
+	afx_msg void OnUpdateFillHoleUI(CCmdUI* pCmdUI);
+	afx_msg void OnShrink();
+	afx_msg void OnUpdateShrinkUI(CCmdUI* pCmdUI);
+	afx_msg void OnCalCenterPoints();
+	afx_msg void OnCalCenterWithAverage();
+	afx_msg void OnCalCenterPointsWithAverageSimilar();
+	afx_msg void OnUpdateCalCenterPointsUI(CCmdUI* pCmdUI);
+	afx_msg void OnUpdateCenterWithAverageUI(CCmdUI* pCmdUI);
+	afx_msg void OnUpdateCalCenterPointsWithAverageSimilarUI(CCmdUI* pCmdUI);
+	afx_msg void OnRemoveIncludedCircles();
+	afx_msg void OnRemovePotentialErrors();
+	afx_msg void OnRemovePotentialErrorsIntersection();
 };
 
 #ifndef _DEBUG  // CellProjectView.cpp 中的调试版本

@@ -38,6 +38,22 @@ BEGIN_MESSAGE_MAP(CCellProjectView, CView)
 	ON_COMMAND(ID_32774, &CCellProjectView::OnGetEdgeInfomation)
 	ON_COMMAND(ID_32775, &CCellProjectView::OnTwoValue)
 	ON_COMMAND(ID_32776, &CCellProjectView::OnFillHole)
+	ON_UPDATE_COMMAND_UI(ID_32771, &CCellProjectView::OnUpdateCellDetectUI)
+	ON_UPDATE_COMMAND_UI(ID_32773, &CCellProjectView::OnUpdateMaybeMark2MarkUI)
+	ON_UPDATE_COMMAND_UI(ID_32774, &CCellProjectView::OnUpdateGetEdgeInfomationUI)
+	ON_UPDATE_COMMAND_UI(ID_32775, &CCellProjectView::OnUpdateTwoValueUI)
+	ON_UPDATE_COMMAND_UI(ID_32776, &CCellProjectView::OnUpdateFillHoleUI)
+	ON_COMMAND(ID_32777, &CCellProjectView::OnShrink)
+	ON_UPDATE_COMMAND_UI(ID_32777, &CCellProjectView::OnUpdateShrinkUI)
+	ON_COMMAND(ID_32778, &CCellProjectView::OnCalCenterPoints)
+	ON_COMMAND(ID_32779, &CCellProjectView::OnCalCenterWithAverage)
+	ON_COMMAND(ID_32780, &CCellProjectView::OnCalCenterPointsWithAverageSimilar)
+	ON_UPDATE_COMMAND_UI(ID_32778, &CCellProjectView::OnUpdateCalCenterPointsUI)
+	ON_UPDATE_COMMAND_UI(ID_32779, &CCellProjectView::OnUpdateCenterWithAverageUI)
+	ON_UPDATE_COMMAND_UI(ID_32780, &CCellProjectView::OnUpdateCalCenterPointsWithAverageSimilarUI)
+	ON_COMMAND(ID_32781, &CCellProjectView::OnRemoveIncludedCircles)
+	ON_COMMAND(ID_32782, &CCellProjectView::OnRemovePotentialErrors)
+	ON_COMMAND(ID_32783, &CCellProjectView::OnRemovePotentialErrorsIntersection)
 END_MESSAGE_MAP()
 
 // CCellProjectView 构造/析构
@@ -176,13 +192,7 @@ void CCellProjectView::OnFileOpen()
 }
 
 
-void CCellProjectView::OnCellDetect()
-{
-	// TODO: 在此添加命令处理程序代码
-	PrepareProcessing();
-	ImgProcesor::markCell(image,start_point,end_point);
-	Invalidate(true);
-}
+
 
 void CCellProjectView::OnLButtonDown(UINT nFlags, CPoint point) {
 	if (!is_draging) {
@@ -214,18 +224,15 @@ void CCellProjectView::OnLButtonUp(UINT nFlags, CPoint point) {
 
 void CCellProjectView::OnMouseMove(UINT nFlags, CPoint point)
 {
-	 //TODO: 在此添加消息处理程序代码和/或调用默认值
 	CMainFrame* pMainFrame = (CMainFrame*)AfxGetMainWnd();
 	HDC hdc = ::GetDC(this->m_hWnd);
 	COLORREF Windows_Hdc_RGB = GetPixel(hdc, point.x, point.y);	//获取指定DC上的像素点RGB值
 	Rgb rgb(Windows_Hdc_RGB);
 	HSI hsi(rgb);
-
 	CString str;
 	str.Format(L"就绪 %d,%d RGB:(%d,%d,%d) HSI:( %.3f,%.3f,%.3f)",point.x,point.y,rgb.r,rgb.g,rgb.b ,hsi.H, hsi.S,hsi.I);
 	pMainFrame->m_wndStatusBar.SetPaneText(0, str, TRUE);
 }
-
 
 
 void CCellProjectView::OnRecoverImage()
@@ -239,13 +246,22 @@ void CCellProjectView::OnRecoverImage()
 	ImgProcesor::copyImage(*backup, *pDoc->image);
 	image = pDoc->image;
 	Invalidate(true);
+	step = 0;
 }
 
+void CCellProjectView::OnCellDetect()
+{
+	PrepareProcessing();
+	ImgProcesor::markCell(image, start_point, end_point);
+	Invalidate(true);
+	step = 1;
+}
 
 void CCellProjectView::OnMaybeMark2Mark(){
 	PrepareProcessing();
 	ImgProcesor::maybemark2mark(image);
 	Invalidate(true);
+	step = 2;
 }
 
 
@@ -254,6 +270,7 @@ void CCellProjectView::OnGetEdgeInfomation()
 	PrepareProcessing();
 	ImgProcesor::getEdgeInfomation(image, backup);
 	Invalidate(true);
+	step = 3;
 }
 
 
@@ -263,12 +280,185 @@ void CCellProjectView::OnTwoValue()
 	ImgProcesor::twovalue(&image);
 	GetDocument()->image = image;
 	Invalidate(true);
+	step = 4;
 }
-
 
 void CCellProjectView::OnFillHole()
 {
 	PrepareProcessing();
 	ImgProcesor::fillHole(image);
 	Invalidate();
+	step = 5;
 }
+
+
+void CCellProjectView::OnShrink()
+{
+	PrepareProcessing();
+	ImgProcesor::shrink(image);
+	Invalidate();
+	step = 6;
+}
+
+void CCellProjectView::OnCalCenterPoints() {
+	CImage bkp;
+	ImgProcesor::copyImage(*image, bkp);
+	auto points = ImgProcesor::calCenter(image);
+	ImgProcesor::copyImage(bkp, *image);
+	CString msg;
+	msg.Format(L"获得的中心点数目= %d", points.size());
+	MessageBox(msg);
+}
+
+
+void CCellProjectView::OnCalCenterWithAverage()
+{
+	CImage bkp;
+	ImgProcesor::copyImage(*image, bkp);
+	auto points = ImgProcesor::calCenterWithAverage(image);
+	ImgProcesor::copyImage(bkp, *image);
+	CString msg;
+	msg.Format(L"取平均值，获得的中心点数目= %d", points.size());
+	MessageBox(msg);
+}
+
+
+
+void CCellProjectView::OnCalCenterPointsWithAverageSimilar()
+{
+	CImage bkp;
+	ImgProcesor::copyImage(*image, bkp);
+	auto points = ImgProcesor::calCenterWithAverage(image,GetDC());
+	ImgProcesor::copyImage(bkp, *image);
+	CString msg;
+	msg.Format(L"平均化相近的中心点后数目= %d", points.size());
+	MessageBox(msg);
+	step = 7;
+}
+
+void CCellProjectView::OnRemoveIncludedCircles()
+{
+	CImage bkp;
+	ImgProcesor::copyImage(*image, bkp);
+	auto points = ImgProcesor::calCenterWithAverage(image, GetDC());
+	ImgProcesor::copyImage(bkp, *image);
+	int size1 = points.size();
+	ImgProcesor::removeIncludedCircles(points, GetDC());
+	int size2 = points.size();
+	CString msg;
+	if (size2 != size1) {
+		msg.Format(L"去掉被包含的圆(Blue )后数目= %d", size2);
+	}
+	else {
+		msg = L"没有被包含的圆（Blue)";
+	}
+	MessageBox(msg);
+}
+
+
+void CCellProjectView::OnRemovePotentialErrors()
+{
+	CImage bkp;
+	ImgProcesor::copyImage(*image, bkp);
+	auto points = ImgProcesor::calCenterWithAverage(image, GetDC());
+	int size1 = points.size();
+	ImgProcesor::removePoentialErrors(image,points, GetDC());
+	ImgProcesor::copyImage(bkp, *image);
+	int size2 = points.size();
+	CString msg;
+	if (size2 != size1) {
+		msg.Format(L"去掉潜在的错误(圆 r<8 Red)后数目=%d", size2);
+	}
+	else {
+		msg = L"没有潜在的错误(圆 r<8 Red)";
+	}
+	MessageBox(msg);
+}
+
+void CCellProjectView::OnRemovePotentialErrorsIntersection()
+{
+	CImage bkp;
+	ImgProcesor::copyImage(*image, bkp);
+	auto points = ImgProcesor::calCenterWithAverage(image, GetDC());
+	ImgProcesor::removePoentialErrors(image, points, GetDC());
+	int size1 = points.size();
+	ImgProcesor::removePotentialErrorsIntersection(image, points, GetDC());
+	ImgProcesor::copyImage(bkp, *image);
+	int size2 = points.size();
+	CString msg;
+	if (size2 != size1) {
+		msg.Format(L"去掉潜在的错误(同两个圆相交,并且不相交的部分是噪声)Bluepen后数目=%d", size2);
+	}
+	else {
+		msg = L"没有相交的潜在错误";
+	}
+	MessageBox(msg);
+}
+
+
+
+
+void CCellProjectView::OnUpdateCellDetectUI(CCmdUI* pCmdUI){
+	if (step == 0)pCmdUI->Enable();
+	else pCmdUI->Enable(false);
+}
+
+
+void CCellProjectView::OnUpdateMaybeMark2MarkUI(CCmdUI* pCmdUI)
+{
+	if (step == 1)pCmdUI->Enable();
+	else pCmdUI->Enable(false);
+}
+
+
+void CCellProjectView::OnUpdateGetEdgeInfomationUI(CCmdUI* pCmdUI)
+{
+	if (step == 2)pCmdUI->Enable();
+	else pCmdUI->Enable(false);
+}
+
+
+void CCellProjectView::OnUpdateTwoValueUI(CCmdUI* pCmdUI){
+	if (step == 3)pCmdUI->Enable();
+	else pCmdUI->Enable(false);
+}
+
+
+void CCellProjectView::OnUpdateFillHoleUI(CCmdUI* pCmdUI){
+	if (step == 4)pCmdUI->Enable();
+	else pCmdUI->Enable(false);
+}
+
+
+void CCellProjectView::OnUpdateShrinkUI(CCmdUI* pCmdUI)
+{
+	if (step == 5)pCmdUI->Enable();
+	else pCmdUI->Enable(false);
+}
+
+
+
+
+
+
+void CCellProjectView::OnUpdateCalCenterPointsUI(CCmdUI* pCmdUI)
+{
+	if (step == 6)pCmdUI->Enable();
+	else pCmdUI->Enable(false);
+}
+
+
+
+void CCellProjectView::OnUpdateCenterWithAverageUI(CCmdUI* pCmdUI)
+{
+	if (step == 6)pCmdUI->Enable();
+	else pCmdUI->Enable(false);
+}
+
+
+void CCellProjectView::OnUpdateCalCenterPointsWithAverageSimilarUI(CCmdUI* pCmdUI)
+{
+	if (step == 6)pCmdUI->Enable();
+	else pCmdUI->Enable(false);
+}
+
