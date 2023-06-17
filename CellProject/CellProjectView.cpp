@@ -380,7 +380,7 @@ void CCellProjectView::OnRemovePotentialErrorsIntersection()
 	CImage bkp;
 	ImgProcesor::copyImage(*image, bkp);
 	auto points = ImgProcesor::calCenterWithAverage(image, GetDC());
-	ImgProcesor::removePoentialErrors(image, points, GetDC());
+	ImgProcesor::removePoentialErrors(image, points);
 	int size1 = points.size();
 	ImgProcesor::removePotentialErrorsIntersection(image, points, GetDC());
 	ImgProcesor::copyImage(bkp, *image);

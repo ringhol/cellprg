@@ -22,7 +22,6 @@ HSI::HSI(const Rgb& rgb) {
 }
 
 bool ImgProcesor::m_bFullEdge = false;
-
 long ImgProcesor::tot_area = 0; 
 long ImgProcesor::tot_x = 0; 
 long ImgProcesor::tot_y = 0;
@@ -75,22 +74,23 @@ bool ImgProcesor::copyImage(const CImage& srcImage, CImage& destImage){
 void ImgProcesor::markCell(CImage* image, CPoint start, CPoint end) {
 	int height = image->GetHeight();
 	int width = image->GetWidth();
+	constexpr double meanH = 210.0 * 360 / 255;
+	constexpr double meanS = 55.0 / 255;
+	const double markDoor = 0.09;
+	const double maybeMarkDoor = 0.15;
 	for (int i = start.x; i < end.x; i++) {
 		for (int j = start.y; j < end.y; j++) {
 			BYTE* pByte = (BYTE*)image->GetPixelAddress(i, j);
 			Rgb rgb(pByte[2], pByte[1], pByte[0]);
 			//计算HSI
 			HSI hsi(rgb);
-			double meanH = 210.0 * 360 / 255;
-			double meanS = 55.0 / 255;
-			double markDoor = 0.09;
-			double maybeMarkDoor = 0.15;
+
 			double x1 = hsi.H;
 			double x2 = meanH;
 			if (x1 < 90)x1 += 360;
 			double y1 = hsi.S;
 			double y2 = meanS;
-			x1 /= 360; x2 /= 360;
+			x1 /= 180; x2 /= 180;
 			double dis = DISTANCE(x1, y1, x2, y2);
 			if (dis < markDoor) {
 				//标记红色
@@ -201,7 +201,6 @@ void ImgProcesor::getEdgeInfomation(CImage* image, const CImage* originImage) {
 			}
 		}
 	}
-
 }
 
 
@@ -243,6 +242,7 @@ void ImgProcesor::twovalue(CImage** image) {
 	*image = newImage;
 	newImage->ReleaseDC();//这里不多调用一次的话delete的时候就会报错
 }
+
 
 void ImgProcesor::fillHole(CImage* image){
 	//0x7X---edge
@@ -785,7 +785,8 @@ void ImgProcesor::removePoentialErrors(const CImage*image,std::vector<CenterPoin
 	std::vector<CenterPoint> tocheck;
 	CPen	Redpen1;
 	Redpen1.CreatePen(PS_DOT, 3, RGB(255, 0, 0));
-	pdc->SelectObject(Redpen1);
+	if(pdc!=nullptr)
+		pdc->SelectObject(Redpen1);
 	for (unsigned int i = 0; i < centerPoints.size(); i++)
 	{	//baord area process
 		CenterPoint centerp;
@@ -799,16 +800,18 @@ void ImgProcesor::removePoentialErrors(const CImage*image,std::vector<CenterPoin
 		if (centerp.y + centerp.radius > image->GetHeight() - 1)
 			centerp.radius += (centerp.y + centerp.radius - image->GetHeight());
 		if (centerPoints.at(i).radius < 8){ // need adjust <
-			Arc(pdc->m_hDC,
-				centerp.x - centerp.radius,
-				centerp.y - centerp.radius,
-				centerp.x + centerp.radius,
-				centerp.y + centerp.radius,
-				centerp.x + centerp.radius,
-				centerp.y,
-				centerp.x + centerp.radius,
-				centerp.y
-			);
+			if (pdc != nullptr) {
+				Arc(pdc->m_hDC,
+					centerp.x - centerp.radius,
+					centerp.y - centerp.radius,
+					centerp.x + centerp.radius,
+					centerp.y + centerp.radius,
+					centerp.x + centerp.radius,
+					centerp.y,
+					centerp.x + centerp.radius,
+					centerp.y
+				);
+			}
 			centerPoints.erase(centerPoints.begin() + i);//(&m_vCenterPoints.at(i));
 			i--;
 		}
