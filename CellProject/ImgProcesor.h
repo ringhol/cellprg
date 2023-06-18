@@ -98,23 +98,29 @@ public:
 	/// </summary>
 	/// <param name="image"></param>
 	/// <returns></returns>
-	static std::vector<CenterPoint>calCenterWithAverage(CImage* image,CDC* pdc=nullptr);
+	static std::vector<CenterPoint>calCenterWithAverage(CImage* image,CDC* pdc=nullptr,CPen* Redpen = nullptr, CPen* Greenpen = nullptr);
 
 	/// <summary>
 	/// 去除被包含的圆的潜在错误
 	/// </summary>
 	/// <param name="centerPoints"></param>
 	/// <param name="pdc"></param>
-	static void removeIncludedCircles(std::vector<CenterPoint>& centerPoints, CDC* pdc = nullptr);
+	static void removeIncludedCircles(std::vector<CenterPoint>& centerPoints, CDC* pdc = nullptr,CPen* Bluepen1=nullptr);
 	/// <summary>
 	/// 去除小半径的潜在错误
 	/// </summary>
 	/// <param name="image"></param>
 	/// <param name="centerPoints"></param>
 	/// <param name="pdc"></param>
-	static void removePoentialErrors(const CImage* image,std::vector<CenterPoint>& centerPoints, CDC* pdc = nullptr);
-
-	static void removePotentialErrorsIntersection(const CImage* image, std::vector<CenterPoint>& centerPoints, CDC* pdc = nullptr);
+	static void removePoentialErrors(const CImage* image,std::vector<CenterPoint>& centerPoints, CDC* pdc = nullptr,CPen * Redpen1=nullptr);
+	/// <summary>
+	/// 去除相交的潜在错误
+	/// </summary>
+	/// <param name="image"></param>
+	/// <param name="centerPoints"></param>
+	/// <param name="pdc"></param>
+	/// <param name="Bluepen1"></param>
+	static void removePotentialErrorsIntersection(const CImage* image, std::vector<CenterPoint>& centerPoints, CDC* pdc,CPen* Bluepen1);
 
 private:
 	/// <summary>

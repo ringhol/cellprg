@@ -12,7 +12,7 @@
 
 #include "CellProjectDoc.h"
 #include "CellProjectView.h"
-
+#include "StatisticsDlg.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -22,7 +22,6 @@
 // CCellProjectView
 
 IMPLEMENT_DYNCREATE(CCellProjectView, CView)
-
 BEGIN_MESSAGE_MAP(CCellProjectView, CView)
 	// 标准打印命令
 	ON_COMMAND(ID_FILE_PRINT, &CView::OnFilePrint)
@@ -54,6 +53,13 @@ BEGIN_MESSAGE_MAP(CCellProjectView, CView)
 	ON_COMMAND(ID_32781, &CCellProjectView::OnRemoveIncludedCircles)
 	ON_COMMAND(ID_32782, &CCellProjectView::OnRemovePotentialErrors)
 	ON_COMMAND(ID_32783, &CCellProjectView::OnRemovePotentialErrorsIntersection)
+	ON_UPDATE_COMMAND_UI(ID_32781, &CCellProjectView::OnUpdateRemoveIncludedCirclesUI)
+	ON_UPDATE_COMMAND_UI(ID_32782, &CCellProjectView::OnUpdateRemovePotentialErrorsUI)
+	ON_UPDATE_COMMAND_UI(ID_32783, &CCellProjectView::OnUpdateRemovePotentialErrorsIntersectionUI)
+	ON_COMMAND(ID_32787, &CCellProjectView::OnRemoveAllPotentialErrors)
+	ON_UPDATE_COMMAND_UI(ID_32787, &CCellProjectView::OnUpdateRemoveAllPotentialErrorsUI)
+	ON_COMMAND(ID_32785, &CCellProjectView::OnCountAll)
+	ON_UPDATE_COMMAND_UI(ID_32785, &CCellProjectView::OnUpdateCountAllUI)
 END_MESSAGE_MAP()
 
 // CCellProjectView 构造/析构
@@ -64,6 +70,15 @@ CCellProjectView::CCellProjectView() noexcept
 	//程序运行时默认自动打开名为data.bmp的图片
 	backup = new CImage;
 	image = nullptr;
+	Redpen = new CPen;
+	Greenpen = new CPen;
+	Bluepen1 = new CPen;
+	Redpen1 = new CPen;
+	Emptypen = new CPen;
+	Redpen->CreatePen(PS_DOT, 1, RGB(255, 0, 0));
+	Redpen1->CreatePen(PS_DOT, 3, RGB(255, 0, 0));
+	Greenpen->CreatePen(PS_DOT, 1, RGB(0, 255, 0));
+	Bluepen1->CreatePen(PS_DOT, 3, RGB(0, 0, 255));
 }
 
 CCellProjectView::~CCellProjectView()
@@ -91,6 +106,12 @@ void CCellProjectView::PrepareProcessing()
 	pMainFrame->m_wndStatusBar.SetPaneText(0, L"处理中", TRUE);
 }
 
+void CCellProjectView::StepGroup(CCmdUI* pCmdUI, int tstep)
+{
+	if (step == tstep)pCmdUI->Enable();
+	else pCmdUI->Enable(false);
+}
+
 void CCellProjectView::OnDraw(CDC* pDC)
 {
 	CCellProjectDoc* pDoc = GetDocument();
@@ -106,10 +127,14 @@ void CCellProjectView::OnDraw(CDC* pDC)
 		start_point.x = 0; start_point.y = 0;
 		ImgProcesor::copyImage(*image, *backup);
 		have_read_document = true;
+
+
+
 	}
 	//显示图片
 	if (image!=nullptr&&!image->IsNull()){
 		image->Draw(pDC->GetSafeHdc(), 0, 0);
+
 	}
 
 	auto prorect = CRect(start_point, end_point);
@@ -328,22 +353,22 @@ void CCellProjectView::OnCalCenterPointsWithAverageSimilar()
 {
 	CImage bkp;
 	ImgProcesor::copyImage(*image, bkp);
-	auto points = ImgProcesor::calCenterWithAverage(image,GetDC());
+	auto points = ImgProcesor::calCenterWithAverage(image,GetDC(),Redpen,Greenpen);
 	ImgProcesor::copyImage(bkp, *image);
 	CString msg;
 	msg.Format(L"平均化相近的中心点后数目= %d", points.size());
 	MessageBox(msg);
-	step = 7;
 }
 
 void CCellProjectView::OnRemoveIncludedCircles()
 {
+	CCellProjectView::OnDraw(GetDC());
 	CImage bkp;
 	ImgProcesor::copyImage(*image, bkp);
-	auto points = ImgProcesor::calCenterWithAverage(image, GetDC());
+	auto points = ImgProcesor::calCenterWithAverage(image, GetDC(),Redpen,Greenpen);
 	ImgProcesor::copyImage(bkp, *image);
 	int size1 = points.size();
-	ImgProcesor::removeIncludedCircles(points, GetDC());
+	ImgProcesor::removeIncludedCircles(points, GetDC(),Bluepen1);
 	int size2 = points.size();
 	CString msg;
 	if (size2 != size1) {
@@ -358,11 +383,14 @@ void CCellProjectView::OnRemoveIncludedCircles()
 
 void CCellProjectView::OnRemovePotentialErrors()
 {
+	CCellProjectView::OnDraw(GetDC());
+
 	CImage bkp;
 	ImgProcesor::copyImage(*image, bkp);
-	auto points = ImgProcesor::calCenterWithAverage(image, GetDC());
+	auto points = ImgProcesor::calCenterWithAverage(image, GetDC(), Redpen, Greenpen);
 	int size1 = points.size();
-	ImgProcesor::removePoentialErrors(image,points, GetDC());
+	ImgProcesor::removePoentialErrors(image,points, GetDC(),Redpen1);
+
 	ImgProcesor::copyImage(bkp, *image);
 	int size2 = points.size();
 	CString msg;
@@ -377,12 +405,14 @@ void CCellProjectView::OnRemovePotentialErrors()
 
 void CCellProjectView::OnRemovePotentialErrorsIntersection()
 {
+	CCellProjectView::OnDraw(GetDC());
+
 	CImage bkp;
 	ImgProcesor::copyImage(*image, bkp);
-	auto points = ImgProcesor::calCenterWithAverage(image, GetDC());
-	ImgProcesor::removePoentialErrors(image, points);
+	auto points = ImgProcesor::calCenterWithAverage(image, GetDC(), Redpen, Greenpen);
+	//ImgProcesor::removePoentialErrors(image, points);
 	int size1 = points.size();
-	ImgProcesor::removePotentialErrorsIntersection(image, points, GetDC());
+	ImgProcesor::removePotentialErrorsIntersection(image, points, GetDC(),Bluepen1);
 	ImgProcesor::copyImage(bkp, *image);
 	int size2 = points.size();
 	CString msg;
@@ -396,69 +426,154 @@ void CCellProjectView::OnRemovePotentialErrorsIntersection()
 }
 
 
+void CCellProjectView::OnRemoveAllPotentialErrors()
+{
+	CCellProjectView::OnDraw(GetDC());
+
+	CImage bkp;
+	ImgProcesor::copyImage(*image, bkp);
+	auto points = ImgProcesor::calCenterWithAverage(image, GetDC(), Redpen, Greenpen);
+	int size1 = points.size();
+	ImgProcesor::removeIncludedCircles(points, GetDC(), Bluepen1);
+
+	ImgProcesor::removePoentialErrors(image, points, GetDC(), Redpen1);
+
+	ImgProcesor::removePotentialErrorsIntersection(image, points, GetDC(), Bluepen1);
+
+	ImgProcesor::copyImage(bkp, *image);
+
+	int size2 = points.size();
+	this->points.swap(points);
+	CString msg;
+	if (size2 != size1) {
+		msg.Format(L"去掉所有潜在的错误后数目=%d", size2);
+	}
+	else {
+		msg = L"没有潜在错误";
+	}
+	MessageBox(msg);
+}
+
+
+void CCellProjectView::OnCountAll()
+{
+	if (points.size() == 0) {
+		MessageBox(L"请先去除所有潜在的错误");
+		return;
+	}
+	//复位图像
+	ImgProcesor::copyImage(*backup, *image);
+	CCellProjectView::OnDraw(GetDC());
+	//绘制细胞
+	CDC* pdc = GetDC();
+	pdc->SelectObject(Redpen);
+	double averageRadius = 0.0;
+	double averageS = 0.0;
+	for (auto p : this->points) {
+		averageRadius += (double)p.radius;
+		averageS += 3.14159 * pow(p.radius, 2);
+		Arc(pdc->GetSafeHdc(),
+			p.x - p.radius,p.y - p.radius,p.x + p.radius,p.y + p.radius,p.x + p.radius,p.y,p.x + p.radius,p.y
+		);
+	}
+	averageRadius /= points.size();
+	averageS /= points.size();
+	CString msg;
+	msg.Format(L"共有%d个细胞,平均半径%.3f,平均面积%.3f", this->points.size(),averageRadius,averageS);
+	MessageBox(msg);
+	StatisticsDlg* dlg = new StatisticsDlg();
+	dlg->Create(IDD_DIALOG1, this);
+	dlg->ShowWindow(SW_SHOW);
+	dlg->SetImage(image);
+
+}
+
 
 
 void CCellProjectView::OnUpdateCellDetectUI(CCmdUI* pCmdUI){
-	if (step == 0)pCmdUI->Enable();
-	else pCmdUI->Enable(false);
+	StepGroup(pCmdUI, 0);
 }
 
 
 void CCellProjectView::OnUpdateMaybeMark2MarkUI(CCmdUI* pCmdUI)
 {
-	if (step == 1)pCmdUI->Enable();
-	else pCmdUI->Enable(false);
+	StepGroup(pCmdUI, 1);
 }
 
 
 void CCellProjectView::OnUpdateGetEdgeInfomationUI(CCmdUI* pCmdUI)
 {
-	if (step == 2)pCmdUI->Enable();
-	else pCmdUI->Enable(false);
+	StepGroup(pCmdUI, 2);
 }
 
 
 void CCellProjectView::OnUpdateTwoValueUI(CCmdUI* pCmdUI){
-	if (step == 3)pCmdUI->Enable();
-	else pCmdUI->Enable(false);
+	StepGroup(pCmdUI, 3);
 }
 
 
 void CCellProjectView::OnUpdateFillHoleUI(CCmdUI* pCmdUI){
-	if (step == 4)pCmdUI->Enable();
-	else pCmdUI->Enable(false);
+	StepGroup(pCmdUI, 4);
 }
 
 
 void CCellProjectView::OnUpdateShrinkUI(CCmdUI* pCmdUI)
 {
-	if (step == 5)pCmdUI->Enable();
-	else pCmdUI->Enable(false);
+	StepGroup(pCmdUI, 5);
 }
-
-
-
 
 
 
 void CCellProjectView::OnUpdateCalCenterPointsUI(CCmdUI* pCmdUI)
 {
-	if (step == 6)pCmdUI->Enable();
-	else pCmdUI->Enable(false);
+	StepGroup(pCmdUI, 6);
 }
 
 
 
 void CCellProjectView::OnUpdateCenterWithAverageUI(CCmdUI* pCmdUI)
 {
-	if (step == 6)pCmdUI->Enable();
-	else pCmdUI->Enable(false);
+	StepGroup(pCmdUI, 6);
 }
 
 
 void CCellProjectView::OnUpdateCalCenterPointsWithAverageSimilarUI(CCmdUI* pCmdUI)
 {
-	if (step == 6)pCmdUI->Enable();
-	else pCmdUI->Enable(false);
+	StepGroup(pCmdUI, 6);
 }
 
+
+
+void CCellProjectView::OnUpdateRemoveIncludedCirclesUI(CCmdUI* pCmdUI)
+{
+	StepGroup(pCmdUI, 6);
+}
+
+
+
+void CCellProjectView::OnUpdateRemovePotentialErrorsUI(CCmdUI* pCmdUI)
+{
+	StepGroup(pCmdUI, 6);
+}
+
+
+
+void CCellProjectView::OnUpdateRemovePotentialErrorsIntersectionUI(CCmdUI* pCmdUI)
+{
+	StepGroup(pCmdUI, 6);
+}
+
+
+
+void CCellProjectView::OnUpdateRemoveAllPotentialErrorsUI(CCmdUI* pCmdUI)
+{
+	StepGroup(pCmdUI, 6);
+}
+
+
+
+
+void CCellProjectView::OnUpdateCountAllUI(CCmdUI* pCmdUI)
+{
+	StepGroup(pCmdUI, 6);
+}

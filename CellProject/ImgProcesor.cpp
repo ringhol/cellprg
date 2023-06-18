@@ -462,7 +462,7 @@ std::vector<CenterPoint> ImgProcesor::calCenter(CImage* image){
 }
 
 
-std::vector<CenterPoint> ImgProcesor::calCenterWithAverage(CImage* image, CDC* pdc) {
+std::vector<CenterPoint> ImgProcesor::calCenterWithAverage(CImage* image, CDC* pdc, CPen* Redpen,CPen* Greenpen) {
 	// 取平均值,获得中心点
 	using namespace std;
 	auto points_temp = calCenter(image);
@@ -512,17 +512,13 @@ std::vector<CenterPoint> ImgProcesor::calCenterWithAverage(CImage* image, CDC* p
 	}
 	if (pdc != nullptr) {
 		vector<CenterPoint> center_points;
-		CPen	Redpen;
-		Redpen.CreatePen(PS_DOT, 1, RGB(255, 0, 0));
-		CPen Greenpen;
-		Greenpen.CreatePen(PS_DOT, 1, RGB(0, 255, 0));
 		for (unsigned int i = 0; i < points.size(); i++){
 			int x0 = points.at(i).x;
 			int y0 = points.at(i).y;
 			pt = points.at(i);
 			bool adj = false;
 			//Red 相近- delete
-			pdc->SelectObject(Redpen);
+
 			for (unsigned int j = i + 1; j < points.size() - 1; j++){
 				int x = points.at(j).x;
 				int y = points.at(j).y;
@@ -532,16 +528,20 @@ std::vector<CenterPoint> ImgProcesor::calCenterWithAverage(CImage* image, CDC* p
 					points.at(i).radius = (points.at(i).radius + points.at(j).radius) / 2;
 					pt = points.at(j);
 					//display err position--delete 
-					Arc(pdc->m_hDC,//-3 for display 
-						pt.x - pt.radius + 3,
-						pt.y - pt.radius + 3,
-						pt.x + pt.radius - 3,
-						pt.y + pt.radius - 3,
-						pt.x + pt.radius - 3,
-						pt.y - 3,
-						pt.x + pt.radius - 3,
-						pt.y - 3
-					);
+					if (Redpen != nullptr){
+						pdc->SelectObject(Redpen);
+						Arc(pdc->m_hDC,//-3 for display 
+							pt.x - pt.radius + 3,
+							pt.y - pt.radius + 3,
+							pt.x + pt.radius - 3,
+							pt.y + pt.radius - 3,
+							pt.x + pt.radius - 3,
+							pt.y - 3,
+							pt.x + pt.radius - 3,
+							pt.y - 3
+						);
+					}
+					
 					points.erase(points.begin() + j);//&points.at(j));
 					i--;
 					adj = true;
@@ -551,17 +551,19 @@ std::vector<CenterPoint> ImgProcesor::calCenterWithAverage(CImage* image, CDC* p
 			if (!adj){ // 非相近
 				if (points.at(i).radius > 4){
 					center_points.push_back(points.at(i));
-					pdc->SelectObject(Greenpen);
-					Arc(pdc->m_hDC,
-						pt.x - pt.radius,
-						pt.y - pt.radius,
-						pt.x + pt.radius,
-						pt.y + pt.radius,
-						pt.x + pt.radius,
-						pt.y,
-						pt.x + pt.radius,
-						pt.y
-					);
+					if (Greenpen != nullptr) {
+						pdc->SelectObject(Greenpen);
+						Arc(pdc->m_hDC,
+							pt.x - pt.radius,
+							pt.y - pt.radius,
+							pt.x + pt.radius,
+							pt.y + pt.radius,
+							pt.x + pt.radius,
+							pt.y,
+							pt.x + pt.radius,
+							pt.y
+						);
+					}
 				}
 			}
 		}
@@ -734,9 +736,7 @@ void ImgProcesor::calCenterArea(CImage* image,std::vector<CenterPoint>& points_t
 
 
 
-void ImgProcesor::removeIncludedCircles(std::vector<CenterPoint>& centerPoints, CDC* pdc){
-	CPen Bluepen1;
-	Bluepen1.CreatePen(PS_DOT, 3, RGB(0, 0, 255));
+void ImgProcesor::removeIncludedCircles(std::vector<CenterPoint>& centerPoints, CDC* pdc, CPen* Bluepen1){
 	int r0, r;
 	int tx, ty;
 	// 去掉被包含的圆
@@ -781,10 +781,8 @@ void ImgProcesor::removeIncludedCircles(std::vector<CenterPoint>& centerPoints, 
 }
 
 
-void ImgProcesor::removePoentialErrors(const CImage*image,std::vector<CenterPoint>& centerPoints, CDC* pdc) {
+void ImgProcesor::removePoentialErrors(const CImage*image,std::vector<CenterPoint>& centerPoints, CDC* pdc,CPen*	Redpen1) {
 	std::vector<CenterPoint> tocheck;
-	CPen	Redpen1;
-	Redpen1.CreatePen(PS_DOT, 3, RGB(255, 0, 0));
 	if(pdc!=nullptr)
 		pdc->SelectObject(Redpen1);
 	for (unsigned int i = 0; i < centerPoints.size(); i++)
@@ -818,9 +816,8 @@ void ImgProcesor::removePoentialErrors(const CImage*image,std::vector<CenterPoin
 	}
 }
 
-void ImgProcesor::removePotentialErrorsIntersection(const CImage*image,std::vector<CenterPoint>& centerPoints, CDC* pdc){
-	CPen Bluepen1;
-	Bluepen1.CreatePen(PS_DOT, 3, RGB(0, 0, 255));
+void ImgProcesor::removePotentialErrorsIntersection(const CImage*image,std::vector<CenterPoint>& centerPoints, CDC* pdc, CPen* Bluepen1){
+
 	pdc->SelectObject(Bluepen1);
 	std::vector<CenterPoint> tocheck;
 	// 去掉潜在的错误(同两个圆相交,并且不相交的部分是噪声)
@@ -859,16 +856,9 @@ void ImgProcesor::removePotentialErrorsIntersection(const CImage*image,std::vect
 					}
 				}
 			if (total < 3.14159 * r0 * r0 * 0.5){ // need adjust 50%
-				auto centerp = centerPoints.at(i);
+				auto p = centerPoints.at(i);
 				Arc(pdc->m_hDC,
-					centerp.x - centerp.radius,
-					centerp.y - centerp.radius,
-					centerp.x + centerp.radius,
-					centerp.y + centerp.radius,
-					centerp.x + centerp.radius,
-					centerp.y,
-					centerp.x + centerp.radius,
-					centerp.y
+					p.x - p.radius,p.y - p.radius,p.x + p.radius,p.y + p.radius,p.x + p.radius,p.y,p.x + p.radius,p.y
 				);
 				centerPoints.erase(centerPoints.begin() + i);//(&m_vCenterPoints.at(i));
 				i--;

@@ -39,6 +39,7 @@ CCellProjectDoc::CCellProjectDoc() noexcept
 	pathname.Format(L"%s", strDirName);
 	filename = pathname + L"\\data.bmp";
 	image->Load(filename);
+
 }
 
 CCellProjectDoc::~CCellProjectDoc()
