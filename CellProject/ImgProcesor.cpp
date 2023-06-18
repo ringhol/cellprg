@@ -13,15 +13,16 @@ HSI::HSI(const Rgb& rgb) {
 	double G = ((double)rgb.g) / 255.0;
 	double B = ((double)rgb.b) / 255.0;
 	double sum = R + G + B;
-	int minV = min(rgb.r, rgb.g);
+	int minV = min(rgb.r, rgb.g);//rgb最小值
 	minV = min(minV, rgb.b);
 	this->I = ((double)(rgb.r + rgb.g + rgb.b)) / 255.0 / 3;
 	this->S = 1 - 3.0 / (rgb.r + rgb.g + rgb.b) * minV;
-	this->H = 180.0 / 3.14159 * acos(((double)(rgb.r - rgb.g) + (rgb.r - rgb.b)) / 2 / sqrt((double)(rgb.r - rgb.g) * (rgb.r - rgb.g) + (rgb.r - rgb.b) * (rgb.g - rgb.b)));
+	this->H = 180.0 / 3.14159 * acos(((double)(rgb.r - rgb.g) + (rgb.r - rgb.b)) / 2 /
+		sqrt((double)(rgb.r - rgb.g) * (rgb.r - rgb.g) + (rgb.r - rgb.b) * (rgb.g - rgb.b)));
 	if (rgb.g < rgb.b)this->H = 360 - this->H;
 }
 
-bool ImgProcesor::m_bFullEdge = false;
+//bool ImgProcesor::m_bFullEdge = false;
 long ImgProcesor::tot_area = 0; 
 long ImgProcesor::tot_x = 0; 
 long ImgProcesor::tot_y = 0;
@@ -394,7 +395,6 @@ void ImgProcesor::genEdge4(CImage* image){
 
 std::vector<CenterPoint> ImgProcesor::calCenter(CImage* image){
 	using namespace std;
-	CenterPoint pt;
 	vector<CenterPoint> points_temp;
 	bool changed = true;
 	BYTE* lpSrc;
@@ -412,7 +412,6 @@ std::vector<CenterPoint> ImgProcesor::calCenter(CImage* image){
 					if (j > 0 && j<image->GetHeight()-1 && i>0 && i < image->GetWidth()-1) // 最边上的不用处理
 					{
 						lpSrc = (BYTE*)image->GetPixelAddress(i,j);
-						m_bFullEdge = true;
 						if (*lpSrc & EDGEPOINT && !(*lpSrc & VISITED))	// 没有访问过的边界
 						{
 							if (!(*(BYTE*)image->GetPixelAddress(i, j - 1) & MARKED) &&
@@ -430,10 +429,7 @@ std::vector<CenterPoint> ImgProcesor::calCenter(CImage* image){
 								// 孤立的点
 								*lpSrc |= CENTERED;
 								// 保存一下CENTER_POINT信息
-								pt.x = i;
-								pt.y = j;
-								pt.radius = k + pre_shrink_count + 4;//circle adjust 
-								points_temp.push_back(pt);
+								points_temp.push_back({i,j,k+pre_shrink_count+4/*circle adjust */});
 								continue;
 							}
 							else if (isNeedToSave(image, i, j)) {
@@ -445,6 +441,7 @@ std::vector<CenterPoint> ImgProcesor::calCenter(CImage* image){
 					}
 			}
 		}
+
 		for (int j = 0; j < image->GetHeight(); j++){
 			for (int i = 0; i < image->GetWidth(); i++){
 				lpSrc = (BYTE*)image->GetPixelAddress(i, j);
@@ -578,8 +575,7 @@ bool ImgProcesor::isNeedToSave(CImage* image, int i, int j)
 	bool res = true;
 	BYTE* lpSrc = (BYTE*)image->GetPixelAddress(i, j);
 	*(lpSrc) |= VISITED;
-	//if (!m_bFullEdge)  //加入：1）速度慢 2）丢细胞
-	//	return;
+
 	if (j == 0 || j == image->GetHeight()-1 || i == 0 || i == image->GetWidth()-1)return false; // 最边上的不用处理
 		
 	if (!(*(BYTE*)image->GetPixelAddress(i - 1, j) & VISITED) &&	// 没有访问过
@@ -598,18 +594,20 @@ bool ImgProcesor::isNeedToSave(CImage* image, int i, int j)
 			res = false;
 	}
 
-	if (!(*(BYTE*)image->GetPixelAddress(i, j+1) & VISITED) &&	// 没有访问过
-		*(BYTE*)image->GetPixelAddress(i, j+1) & MARKED){	// 标志了
-		if (*(BYTE*)image->GetPixelAddress(i, j + 1) & EDGEPOINT)		// 并且是边缘
-			res = isNeedToSave(image,i, j + 1); // 下面
-		else
-			res = false;
-	}
+
 
 	if (!(*(BYTE*)image->GetPixelAddress(i, j - 1) & VISITED) &&	// 没有访问过
 		*(BYTE*)image->GetPixelAddress(i, j - 1) & MARKED){	// 标志了
 		if (*(BYTE*)image->GetPixelAddress(i, j - 1) & EDGEPOINT)		// 并且是边缘
 			res = isNeedToSave(image,i, j - 1); // 上面
+		else
+			res = false;
+	}
+
+	if (!(*(BYTE*)image->GetPixelAddress(i, j + 1) & VISITED) &&	// 没有访问过
+		*(BYTE*)image->GetPixelAddress(i, j + 1) & MARKED) {	// 标志了
+		if (*(BYTE*)image->GetPixelAddress(i, j + 1) & EDGEPOINT)		// 并且是边缘
+			res = isNeedToSave(image, i, j + 1); // 下面
 		else
 			res = false;
 	}
@@ -630,19 +628,17 @@ bool ImgProcesor::isNeedToSave(CImage* image, int i, int j)
 		else
 			res = false;
 	}
-
+	if (!(*(BYTE*)image->GetPixelAddress(i + 1, j - 1) & VISITED) &&	// 没有访问过
+		*(BYTE*)image->GetPixelAddress(i + 1, j - 1) & MARKED) {		// 标志了
+		if (*(BYTE*)image->GetPixelAddress(i + 1, j - 1) & EDGEPOINT)		// 并且是边缘
+			res = isNeedToSave(image, i + 1, j - 1); // 右下
+		else
+			res = false;
+	}
 	if (!(*(BYTE*)image->GetPixelAddress(i + 1, j + 1) & VISITED) &&	// 没有访问过
 		*(BYTE*)image->GetPixelAddress(i + 1, j + 1) & MARKED){		// 标志了
 		if (*(BYTE*)image->GetPixelAddress(i + 1, j + 1) & EDGEPOINT)		// 并且是边缘
 			res = isNeedToSave(image,i + 1, j + 1); // 右上
-		else
-			res = false;
-	}
-
-	if (!(*(BYTE*)image->GetPixelAddress(i + 1, j - 1) & VISITED) &&	// 没有访问过
-		*(BYTE*)image->GetPixelAddress(i + 1, j - 1) & MARKED){		// 标志了
-		if (*(BYTE*)image->GetPixelAddress(i + 1, j - 1) & EDGEPOINT)		// 并且是边缘
-			res = isNeedToSave(image,i + 1, j - 1); // 右下
 		else
 			res = false;
 	}
@@ -656,11 +652,7 @@ void ImgProcesor::saveIt(CImage* image, std::vector<CenterPoint>& points_temp, i
 	if (j == 0 || j == image->GetHeight()-1 || i ==0 || i == image->GetWidth()-1) // 最边上的不用处理
 		return;
 	if (!(*lpSrc & CENTERED)) {
-		CenterPoint pt;
-		pt.x = i;
-		pt.y = j;
-		pt.radius = radius;
-		points_temp.push_back(pt);
+		points_temp.push_back({i,j,radius});
 		// marke current point
 		*lpSrc |= CENTERED;
 	}
@@ -737,8 +729,7 @@ void ImgProcesor::calCenterArea(CImage* image,std::vector<CenterPoint>& points_t
 
 
 void ImgProcesor::removeIncludedCircles(std::vector<CenterPoint>& centerPoints, CDC* pdc, CPen* Bluepen1){
-	int r0, r;
-	int tx, ty;
+	int r;
 	// 去掉被包含的圆
 	//Blue 相近- delete
 	bool bdelete = false;
@@ -836,7 +827,7 @@ void ImgProcesor::removePotentialErrorsIntersection(const CImage*image,std::vect
 				tocheck.push_back({x,y,r});
 			}
 		}
-		int size = tocheck.size();
+		size_t size = tocheck.size();
 		if (size > 0){ // 同两个以上的圆相交
 			int total = 0;
 			for (int tx = x0 - r0; tx < x0 + r0; tx++)
