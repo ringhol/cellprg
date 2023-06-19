@@ -23,28 +23,24 @@ void StatisticsDlg::SetImage(CImage* image)
 	}
 	this->image = image;
 	//绘制HSI直方图
-	const UINT length = 256;
+	const UINT length = 255;
 	memset(H, 0, sizeof(H));
 	memset(S, 0, sizeof(S));
 	memset(I, 0, sizeof(I));
 	for (int i = 0; i < image->GetWidth(); i++) {
 		for (int j = 0; j < image->GetHeight(); j++) {
 			BYTE* pixel = (BYTE*)image->GetPixelAddress(i, j);
-			Rgb rgb(pixel[2], pixel[1], pixel[0]);
-			HSI hsi(rgb);
+			HSI hsi(Rgb{ pixel[2], pixel[1], pixel[0]});
 			// 将HSI值转换到0-255范围内
 			int nH = 0, nS = 0, nI = 0;
 			if (hsi.H == hsi.H) {
-				nH = (int)(hsi.H / 360.0 * length);
-				H[nH]++;
+				H[(int)(hsi.H / 360.0 * length)]++;
 			}
 			if (hsi.S == hsi.S) {
-				nS = (int)(hsi.S * length);
-				S[nS]++;
+				S[(int)(hsi.S * length)]++;
 			}
 			if (hsi.I == hsi.I) {
-				nI = (int)(hsi.I * length);
-				I[nI]++;
+				I[(int)(hsi.I * length)]++;
 			}
 		}
 	}
@@ -75,22 +71,26 @@ void StatisticsDlg::SetImage(CImage* image)
 	pDC->LineTo(0, -360);
 	pDC->MoveTo(0, 0);
 	int yGap = 120;
-	CPen penH(PS_SOLID, 2, RGB(255, 0, 0));
-	CPen penS(PS_SOLID, 2, RGB(0, 255, 0));
-	CPen penI(PS_SOLID, 2, RGB(0, 0, 255));
+	CPen penH(PS_SOLID, 1.5, RGB(255, 0, 0));
+	CPen penS(PS_SOLID, 1.5, RGB(0, 255, 0));
+	CPen penI(PS_SOLID, 1.5, RGB(0, 0, 255));
+
+	const int deltaX = 2;
+
 	//绘制I
 	CPen* pOldPen = pDC->SelectObject(&penI);
-	for (int i = 0; i < length; i++) {
+	for (int i = 0; i < length; i+= deltaX) {
 		int nCount = I[i];
 		int nBarHeight = (int)(nCount * yGap / maxI);
 		pDC->LineTo(i,  - nBarHeight);
 		pDC->MoveTo(i, -nBarHeight);
 	}
 	pDC->SelectObject(pOldPen);
+
 	//绘制S
 	pOldPen = pDC->SelectObject(&penS);
 	pDC->MoveTo(0,-yGap);
-	for (int i = 0; i < length; i++) {
+	for (int i = 0; i < length; i+= deltaX) {
 		int nCount = S[i];
 		int nBarHeight = (int)(nCount * yGap / maxS);
 		pDC->LineTo(i, -yGap  - nBarHeight);
@@ -101,7 +101,7 @@ void StatisticsDlg::SetImage(CImage* image)
 	//绘制H
 	pOldPen = pDC->SelectObject(&penH);
 	pDC->MoveTo(0, -2*yGap);
-	for (int i = 0; i < length; i++) {
+	for (int i = 0; i < length; i+= deltaX) {
 		int nCount = H[i];
 		int nBarHeight = (int)(nCount * yGap / maxH);
 		pDC->LineTo(i, -yGap*2-nBarHeight);
@@ -123,6 +123,7 @@ void StatisticsDlg::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(StatisticsDlg, CDialogEx)
 	ON_BN_CLICKED(IDOK, &StatisticsDlg::OnBnClickedOk)
+	ON_WM_LBUTTONDOWN()
 END_MESSAGE_MAP()
 
 
@@ -133,4 +134,19 @@ void StatisticsDlg::OnBnClickedOk()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	CDialogEx::OnOK();
+}
+
+
+
+
+void StatisticsDlg::OnLButtonDown(UINT nFlags, CPoint point)
+{
+	CPen pen;
+	pen.CreatePen(PS_DOT, 1.5, RGB(128, 128, 0));
+	CDC* pDC = GetDC();
+	pDC->SetViewportOrg(10, 400);
+	pDC->SelectObject(pen);
+	pDC->MoveTo(point.x, -10);
+	pDC->LineTo(point.x, -380);
+	CDialogEx::OnLButtonDown(nFlags, point);
 }

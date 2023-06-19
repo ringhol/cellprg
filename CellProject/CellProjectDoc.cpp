@@ -57,7 +57,7 @@ BOOL CCellProjectDoc::OnNewDocument()
 
 	// TODO: 在此添加重新初始化代码
 	// (SDI 文档将重用该文档)
-
+	SetTitle(L"Cellprg276");
 	return TRUE;
 }
 

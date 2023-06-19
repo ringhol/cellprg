@@ -70,7 +70,7 @@ BOOL CCellProjectApp::InitInstance()
 	InitCommonControlsEx(&InitCtrls);
 
 	CWinApp::InitInstance();
-
+	
 
 	// 初始化 OLE 库
 	if (!AfxOleInit())

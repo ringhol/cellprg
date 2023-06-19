@@ -13,13 +13,23 @@ HSI::HSI(const Rgb& rgb) {
 	double G = ((double)rgb.g) / 255.0;
 	double B = ((double)rgb.b) / 255.0;
 	double sum = R + G + B;
-	int minV = min(rgb.r, rgb.g);//rgb最小值
-	minV = min(minV, rgb.b);
-	this->I = ((double)(rgb.r + rgb.g + rgb.b)) / 255.0 / 3;
-	this->S = 1 - 3.0 / (rgb.r + rgb.g + rgb.b) * minV;
-	this->H = 180.0 / 3.14159 * acos(((double)(rgb.r - rgb.g) + (rgb.r - rgb.b)) / 2 /
-		sqrt((double)(rgb.r - rgb.g) * (rgb.r - rgb.g) + (rgb.r - rgb.b) * (rgb.g - rgb.b)));
-	if (rgb.g < rgb.b)this->H = 360 - this->H;
+	I = sum / 3.0;
+	double minval = min(R, G);
+	minval = min(B, minval);
+	double maxval = max(R, G);
+	maxval = max(B, maxval);
+	if (I < 0.00001)S = 0;
+	else S = 1.0 - (3.0 * minval) / sum;
+	if (minval == maxval) {
+		H = NAN;
+		S = 0;
+		return;
+	}
+	double tmp1 = ((R - G) + (R - B)) / 2.0;
+	double tmp2 = pow(R - G, 2) + (R - B) * (G - B);
+	double quotient = tmp1 / sqrt(tmp2);
+	double angle = 180.0 / 3.14159 * acos(quotient);
+	H = (B > G) ? 360.0 - angle : angle;
 }
 
 //bool ImgProcesor::m_bFullEdge = false;
@@ -73,8 +83,7 @@ bool ImgProcesor::copyImage(const CImage& srcImage, CImage& destImage){
 
 
 void ImgProcesor::markCell(CImage* image, CPoint start, CPoint end) {
-	int height = image->GetHeight();
-	int width = image->GetWidth();
+
 	constexpr double meanH = 210.0 * 360 / 255;
 	constexpr double meanS = 55.0 / 255;
 	const double markDoor = 0.09;
@@ -151,17 +160,15 @@ void ImgProcesor::getEdgeInfomation(CImage* image, const CImage* originImage) {
 	const int edgeDoor = 45;
 	CImage oriImg;
 	copyImage(*originImage, oriImg);
-	int lineBytes = image->GetBPP() / 8 * image->GetWidth();
 	//get edge information
 	for (int i = 0 + 1; i < image->GetHeight() - 1; i++) {//boarder no edge
 		for (int j = 0 + 1; j < image->GetWidth() - 1; j++) {
 			BYTE* lpDst = (BYTE*)image->GetPixelAddress(j, i);
 			if (*(lpDst) == 0 || *(lpDst) == 255) {//Mark /Maybe Mark
 				double pixel[9];
-				BYTE* lpSrc = (BYTE*)oriImg.GetPixelAddress(j, i);
 				for (int m = -1; m < 2; m++)                    //3*3矩阵
 					for (int n = -1; n < 2; n++) {
-						unsigned char* lpSrc1 = lpSrc - lineBytes * m + 3 * n;
+						BYTE* lpSrc1 = (BYTE*)oriImg.GetPixelAddress(j, i+m);
 						pixel[(m + 1) * 3 + n + 1] = ((int)*lpSrc1 + *(lpSrc1 + 1) + *(lpSrc1 + 2)) / 3;      //可修改
 					}
 				//Sobel
@@ -190,8 +197,9 @@ void ImgProcesor::getEdgeInfomation(CImage* image, const CImage* originImage) {
 				for (int m = -M; m <= M; m++)
 					for (int n = -M; n <= M; n++) {
 						if (m == -M || m == M || n == -M || n == M) {
+							BYTE* lpDst1 = (BYTE*)image->GetPixelAddress(j, i-m)+1;
 							//noMark && no Edge
-							if (*(lpDst + lineBytes * m + n * 3) || (*(lpDst + lineBytes * m + n * 3 + 1) == 255)) {
+							if (*(lpDst1)|| (*(lpDst1 + 1) == 255)) {
 								bdelete = false;
 								m = M + 1; n = M + 1;//out
 							}
@@ -206,7 +214,6 @@ void ImgProcesor::getEdgeInfomation(CImage* image, const CImage* originImage) {
 
 
 void ImgProcesor::twovalue(CImage** image) {
-	// TODO: 在此添加命令处理程序代码
 		// 暂时分配内存，以保存新图像
 	CImage* newImage = new CImage;
 	newImage->Create((*image)->GetWidth(), (*image)->GetHeight(), 8);
@@ -290,22 +297,25 @@ void ImgProcesor::processFillHole(CImage* image, int x, int y){
 		lpSrc = (BYTE*)image->GetPixelAddress(x, y);
 		if (y > 0&&y<image->GetHeight()-1&& x > 0 && x < image->GetWidth()-1){
 			//if no-marked & no-visited
-			if (!(*(BYTE*)image->GetPixelAddress(x,y-1) & MARK_VISITED)){
+			if (/*y > 0 &&*/ !(*(BYTE*)image->GetPixelAddress(x, y - 1) & MARK_VISITED)) {
 				s.push({ x, y - 1 });
 				v.push_back({ x, y - 1 });
 				*(BYTE*)image->GetPixelAddress(x, y - 1) |= VISITED;
 			}
-			if (!(*(BYTE*)image->GetPixelAddress(x, y + 1) & MARK_VISITED)) {
+
+			if (/*y<image->GetHeight()-1&&*/!(*(BYTE*)image->GetPixelAddress(x, y + 1) & MARK_VISITED)) {
 				s.push({ x, y + 1 });
 				v.push_back({ x, y + 1 });
 				*(BYTE*)image->GetPixelAddress(x, y + 1) |= VISITED;
 			}
-			if (!(*(BYTE*)image->GetPixelAddress(x - 1, y) & MARK_VISITED)) {
+
+			if (/*x>0&&*/!(*(BYTE*)image->GetPixelAddress(x - 1, y) & MARK_VISITED)) {
 				s.push({ x - 1, y });
 				v.push_back({ x - 1, y });
 				*(BYTE*)image->GetPixelAddress(x - 1, y) |= VISITED;
 			}
-			if (!(*(BYTE*)image->GetPixelAddress(x + 1, y) & MARK_VISITED)) {
+
+			if (/*x<image->GetWidth()-1&&*/!(*(BYTE*)image->GetPixelAddress(x + 1, y) & MARK_VISITED)) {
 				s.push({ x + 1, y });
 				v.push_back({ x + 1, y });
 				*(BYTE*)image->GetPixelAddress(x + 1, y) |= VISITED;
@@ -319,9 +329,7 @@ void ImgProcesor::processFillHole(CImage* image, int x, int y){
 	}
 	if (v.size() < MAX_HOLE && !bBorder){
 		for (UINT k = 0; k < v.size(); k++) {
-			x = v[k].x;
-			y = v[k].y;
-			lpSrc = (BYTE*)image->GetPixelAddress(x, y);
+			lpSrc = (BYTE*)image->GetPixelAddress(v[k].x, v[k].y);
 			*lpSrc |= MARKED;
 		}
 	}
@@ -342,8 +350,8 @@ void ImgProcesor::shrink(CImage* image){
 				if (*lpSrc & EDGEPOINT)(*lpSrc) &= NO_MARK;//marked=0;
 			}
 		}
-		if (k % 2 == 0)genEdge4(image);
-		else genEdge8(image);
+		if (k % 2 == 0)genEdge8(image);
+		else genEdge4(image);
 	}
 }
 
@@ -417,12 +425,12 @@ std::vector<CenterPoint> ImgProcesor::calCenter(CImage* image){
 							if (!(*(BYTE*)image->GetPixelAddress(i, j - 1) & MARKED) &&
 								!(*(BYTE*)image->GetPixelAddress(i, j + 1) & MARKED) &&
 								!(*(BYTE*)image->GetPixelAddress(i - 1, j) & MARKED) &&
-								!(*(BYTE*)image->GetPixelAddress(i + 1, j) & MARKED)&&
-
+								!(*(BYTE*)image->GetPixelAddress(i + 1, j) & MARKED)/*&&
+								
 								!(*(BYTE*)image->GetPixelAddress(i + 1, j+1) & MARKED)&&
 								!(*(BYTE*)image->GetPixelAddress(i + 1, j-1) & MARKED)&&
 								!(*(BYTE*)image->GetPixelAddress(i - 1, j+1) & MARKED)&&
-								!(*(BYTE*)image->GetPixelAddress(i - 1, j-1) & MARKED)){
+								!(*(BYTE*)image->GetPixelAddress(i - 1, j-1) & MARKED)*/){
 								if (k <= 2){ // 基本上这种是噪音
 									continue;
 								}
