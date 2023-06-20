@@ -39,7 +39,6 @@ CCellProjectDoc::CCellProjectDoc() noexcept
 	pathname.Format(L"%s", strDirName);
 	filename = pathname + L"\\data.bmp";
 	image->Load(filename);
-
 }
 
 CCellProjectDoc::~CCellProjectDoc()
@@ -57,7 +56,7 @@ BOOL CCellProjectDoc::OnNewDocument()
 
 	// TODO: 在此添加重新初始化代码
 	// (SDI 文档将重用该文档)
-	SetTitle(L"Cellprg276");
+	SetTitle(L"Cellprg276.bmp");
 	return TRUE;
 }
 
@@ -70,11 +69,31 @@ void CCellProjectDoc::Serialize(CArchive& ar)
 {
 	if (ar.IsStoring())
 	{
-		// TODO: 在此添加存储代码
+		IStream* pStream = NULL;
+		if (SUCCEEDED(CreateStreamOnHGlobal(NULL, TRUE, &pStream)))
+		{
+			// 将图像保存到流中
+			image->Save(pStream, Gdiplus::ImageFormatBMP);
+			// 将流数据写入存档
+			HGLOBAL hGlobal = NULL;
+			GetHGlobalFromStream(pStream, &hGlobal);
+			if (hGlobal != NULL)
+			{
+				void* pData = GlobalLock(hGlobal);
+				if (pData != NULL)
+				{
+					DWORD dwSize = GlobalSize(hGlobal);
+					ar.Write(pData, dwSize);
+					GlobalUnlock(hGlobal);
+				}
+			}
+			// 释放资源
+			pStream->Release();
+		}
 	}
 	else
 	{
-		// TODO: 在此添加加载代码
+		
 	}
 }
 
