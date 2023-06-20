@@ -252,17 +252,21 @@ void ImgProcesor::twovalue(CImage** image) {
 }
 
 
-void ImgProcesor::fillHole(CImage* image){
+std::vector<Hole> ImgProcesor::fillHole(CImage* image){
 	//0x7X---edge
 	//0x8X---Mark--not edge
 	//0xfX--Mark --edge
 	//0xX1---visited
+	std::vector<Hole> holes;
 	for (int i = 0 + 1; i < image->GetHeight() ; i++){
 		for (int j = 0 + 1; j < image->GetWidth() ; j++){
 			BYTE* lpSrc = (BYTE*)image->GetPixelAddress(j, i);
 			//if no-marked & no-visited
 			if (!(*lpSrc & MARK_VISITED)) {//未访问过的黑点
-				processFillHole(image,j, i);
+				auto hole = processFillHole(image,j, i);
+				if (hole.size != 0) {
+					holes.push_back(hole);
+				}
 			}
 		}
 	}
@@ -277,11 +281,12 @@ void ImgProcesor::fillHole(CImage* image){
 					*lpSrc = 0;
 		}
 	}
+	return holes;
 }
 
 
 
-void ImgProcesor::processFillHole(CImage* image, int x, int y){
+Hole ImgProcesor::processFillHole(CImage* image, int x, int y){
 	using namespace std;
 	stack<CPoint> s;
 	vector<CPoint> v;//v save for fill holes
@@ -332,7 +337,9 @@ void ImgProcesor::processFillHole(CImage* image, int x, int y){
 			lpSrc = (BYTE*)image->GetPixelAddress(v[k].x, v[k].y);
 			*lpSrc |= MARKED;
 		}
+		return { x,y,v.size() };
 	}
+	return { -1,-1,0 };
 }
 
 

@@ -23,6 +23,13 @@ public:
 	HSI(double H, double S, double I) :H(H),S(S),I(I){};
 };
 
+struct Hole {
+	int x;
+	int y;
+	size_t size;
+};
+
+
 struct CenterPoint
 {
 	int x;
@@ -81,7 +88,7 @@ public:
 	/// 填洞
 	/// </summary>
 	/// <param name="image"></param>
-	static void fillHole(CImage* image);
+	static std::vector<Hole> fillHole(CImage* image);
 	/// <summary>
 	/// 收缩
 	/// </summary>
@@ -129,7 +136,7 @@ private:
 	/// <param name="image"></param>
 	/// <param name="i"></param>
 	/// <param name="j"></param>
-	static void processFillHole(CImage* image,int i,int j);
+	static Hole processFillHole(CImage* image,int i,int j);
 	/// <summary>
 	/// 根据周围8个点有没有背景来生成边界
 	/// </summary>

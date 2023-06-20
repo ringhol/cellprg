@@ -94,6 +94,7 @@ public:
 	afx_msg void OnUpdateRemoveAllPotentialErrorsUI(CCmdUI* pCmdUI);
 	afx_msg void OnCountAll();
 	afx_msg void OnUpdateCountAllUI(CCmdUI* pCmdUI);
+	afx_msg void OnAllSteps();
 };
 
 #ifndef _DEBUG  // CellProjectView.cpp 中的调试版本

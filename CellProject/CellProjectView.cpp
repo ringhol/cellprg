@@ -60,6 +60,7 @@ BEGIN_MESSAGE_MAP(CCellProjectView, CView)
 	ON_UPDATE_COMMAND_UI(ID_32787, &CCellProjectView::OnUpdateRemoveAllPotentialErrorsUI)
 	ON_COMMAND(ID_32785, &CCellProjectView::OnCountAll)
 	ON_UPDATE_COMMAND_UI(ID_32785, &CCellProjectView::OnUpdateCountAllUI)
+	ON_COMMAND(ID_32788, &CCellProjectView::OnAllSteps)
 END_MESSAGE_MAP()
 
 // CCellProjectView 构造/析构
@@ -489,6 +490,68 @@ void CCellProjectView::OnCountAll()
 }
 
 
+void CCellProjectView::OnAllSteps()
+{
+	PrepareProcessing();
+	ImgProcesor::copyImage(*backup, *image);
+	MessageBox(L"Step1:Mark");
+	ImgProcesor::markCell(image, start_point, end_point);
+	CCellProjectView::OnDraw(GetDC());
+	MessageBox(L"Mark(Red)& maybe Mark(Blue)");
+	ImgProcesor::maybemark2mark(image);
+	ImgProcesor::getEdgeInfomation(image, backup);
+	CCellProjectView::OnDraw(GetDC());
+	MessageBox(L"maybe Mark to Mark(Bright Red(128,0,0))");
+	MessageBox(L"Step2:TwoValue");
+	ImgProcesor::twovalue(&image);
+	CCellProjectView::OnDraw(GetDC());
+	MessageBox(L"Step3:FillHoles");
+	auto holes = ImgProcesor::fillHole(image);
+	CCellProjectView::OnDraw(GetDC());
+	CString msg;
+	for (auto hole : holes) {
+		CString tmp;
+		tmp.Format(L"%d--(%d,%d)\n", hole.size, hole.x, hole.y);
+		msg += tmp;
+	}
+	CCellProjectView::OnDraw(GetDC());
+	MessageBox(msg);
+	MessageBox(L"Step4:Shrink");
+	ImgProcesor::shrink(image);
+	CCellProjectView::OnDraw(GetDC());
+	MessageBox(L"Step5:FindCenter");
+	CImage bak1;
+	CImage bak2;
+	CImage bak3;
+	ImgProcesor::copyImage(*image, bak1);
+	ImgProcesor::copyImage(*image, bak2);
+	ImgProcesor::copyImage(*image, bak3);
+	auto centerpoints1 = ImgProcesor::calCenter(&bak1);
+	msg.Format(L"获得中心点数目:%d", centerpoints1.size());
+	MessageBox(msg);
+	auto centerpoints2 = ImgProcesor::calCenterWithAverage(&bak2);
+	msg.Format(L"取平均值，获取中心点数目:%d", centerpoints2.size());
+	MessageBox(msg);
+	auto centerpoints3 = ImgProcesor::calCenterWithAverage(&bak3,GetDC(), Redpen, Greenpen);
+	msg.Format(L"平均化相近的中心点后，获取中心点数目:%d", centerpoints3.size());
+	MessageBox(msg);
+	//去除误差
+	ImgProcesor::removeIncludedCircles(centerpoints3, GetDC(), Bluepen1);
+	msg.Format(L"去除包含的误差后中心点数目:%d", centerpoints3.size());
+	MessageBox(msg);
+
+	ImgProcesor::removePoentialErrors(image, centerpoints3, GetDC(), Redpen1);
+	msg.Format(L"去除小半径（r<8)后的中心点数目:%d", centerpoints3.size());
+	MessageBox(msg);
+
+	ImgProcesor::removePotentialErrorsIntersection(image, centerpoints3, GetDC(), Bluepen1);
+	msg.Format(L"去除潜在相交错误后中心点数目:%d", centerpoints3.size());
+	MessageBox(msg);
+	MessageBox(L"Step6:Count");
+	points = centerpoints3;
+	OnCountAll();
+}
+
 
 void CCellProjectView::OnUpdateCellDetectUI(CCmdUI* pCmdUI){
 	StepGroup(pCmdUI, 0);
@@ -577,3 +640,5 @@ void CCellProjectView::OnUpdateCountAllUI(CCmdUI* pCmdUI)
 {
 	StepGroup(pCmdUI, 6);
 }
+
+
