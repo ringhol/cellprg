@@ -100,7 +100,7 @@ void ImgProcesor::markCell(CImage* image, CPoint start, CPoint end) {
 			if (x1 < 90)x1 += 360;
 			double y1 = hsi.S;
 			double y2 = meanS;
-			x1 /= 180; x2 /= 180;
+			x1 /= 360; x2 /= 360;
 			double dis = DISTANCE(x1, y1, x2, y2);
 			if (dis < markDoor) {
 				//标记红色
@@ -112,16 +112,16 @@ void ImgProcesor::markCell(CImage* image, CPoint start, CPoint end) {
 			}
 			else {
 				if (rgb.b == 0) {
-					pByte[2] = rgb.r; pByte[1] = rgb.g; pByte[0] = 1;
+					pByte[0] = 1;
 				}
 				else if (rgb.b == 255) {
-					pByte[2] = rgb.r; pByte[1] = rgb.g; pByte[0] = 254;
+					pByte[0] = 254;
 				}
 				else if (rgb.r == 128) {
-					pByte[2] = 127; pByte[1] = rgb.g; pByte[0] = rgb.b;
+					pByte[2] = 127;
 				}
 				if (rgb.g == 255) {
-					pByte[2] = rgb.r; pByte[1] = 254; pByte[0] = rgb.b;
+					pByte[1] = 254;
 				}
 			}
 		}
@@ -137,16 +137,12 @@ void ImgProcesor::maybemark2mark(CImage* image) {
 			for (int j = 0; j < image->GetHeight(); j++) {
 				BYTE* pByte = (BYTE*)image->GetPixelAddress(i, j);
 				if (*pByte == 255) {//maybe Mark 
-					bool bProc = false;
+					// maybe Mark have Mark Point to Mark 
 					if ((j > 0 && *(BYTE*)image->GetPixelAddress(i, j - 1) == 0)
 						|| (j < image->GetHeight() - 1 && *(BYTE*)image->GetPixelAddress(i, j + 1) == 0)
 						|| (i > 0 && *(BYTE*)image->GetPixelAddress(i - 1, j) == 0)
 						|| (i < image->GetWidth() - 1 && *(BYTE*)image->GetPixelAddress(i + 1, j) == 0)) {
-						bProc = true;
-					}
-					// maybe Mark have Mark Point to Mark 
-					if (bProc) {
-						pByte[0] = 0;
+						*pByte = 0;
 						MarkChg = true;
 						*(pByte + 2) = MARKED;
 					}
@@ -168,8 +164,8 @@ void ImgProcesor::getEdgeInfomation(CImage* image, const CImage* originImage) {
 				double pixel[9];
 				for (int m = -1; m < 2; m++)                    //3*3矩阵
 					for (int n = -1; n < 2; n++) {
-						BYTE* lpSrc1 = (BYTE*)oriImg.GetPixelAddress(j, i+m);
-						pixel[(m + 1) * 3 + n + 1] = ((int)*lpSrc1 + *(lpSrc1 + 1) + *(lpSrc1 + 2)) / 3;      //可修改
+						BYTE* lpSrc = (BYTE*)oriImg.GetPixelAddress(j + n, i + m);
+						pixel[(m + 1) * 3 + n + 1] = (*lpSrc + *(lpSrc + 1) + *(lpSrc + 2)) / 3.0;      //可修改
 					}
 				//Sobel
 				double tmp1 = pixel[0] + 2 * pixel[1] + pixel[2] - pixel[6] - 2 * pixel[7] - pixel[8];
@@ -197,7 +193,7 @@ void ImgProcesor::getEdgeInfomation(CImage* image, const CImage* originImage) {
 				for (int m = -M; m <= M; m++)
 					for (int n = -M; n <= M; n++) {
 						if (m == -M || m == M || n == -M || n == M) {
-							BYTE* lpDst1 = (BYTE*)image->GetPixelAddress(j, i-m)+1;
+							auto lpDst1 = (BYTE*)image->GetPixelAddress(j+n, i-m);
 							//noMark && no Edge
 							if (*(lpDst1)|| (*(lpDst1 + 1) == 255)) {
 								bdelete = false;
@@ -214,7 +210,7 @@ void ImgProcesor::getEdgeInfomation(CImage* image, const CImage* originImage) {
 
 
 void ImgProcesor::twovalue(CImage** image) {
-		// 暂时分配内存，以保存新图像
+	// 保存新图像
 	CImage* newImage = new CImage;
 	newImage->Create((*image)->GetWidth(), (*image)->GetHeight(), 8);
 	// 在调色板中初始化256种颜色值
@@ -236,7 +232,7 @@ void ImgProcesor::twovalue(CImage** image) {
 			BYTE* lpDst = (BYTE*)newImage->GetPixelAddress(j, i);
 			BYTE v = 0;
 			//Mark
-			if (*(lpSrc) == 0) {
+			if (*lpSrc == 0) {
 				v = TWOVALUE_H;
 				if (*(lpSrc + 1))v |= EDGEPOINT;//set edge
 				else if (j == 0 || j == newImage->GetWidth() - 1 || i == 0 || i == newImage->GetHeight() - 1) {
@@ -258,8 +254,8 @@ std::vector<Hole> ImgProcesor::fillHole(CImage* image){
 	//0xfX--Mark --edge
 	//0xX1---visited
 	std::vector<Hole> holes;
-	for (int i = 0 + 1; i < image->GetHeight() ; i++){
-		for (int j = 0 + 1; j < image->GetWidth() ; j++){
+	for (int i =  1; i < image->GetHeight() -1; i++){
+		for (int j =  1; j < image->GetWidth()-1 ; j++){
 			BYTE* lpSrc = (BYTE*)image->GetPixelAddress(j, i);
 			//if no-marked & no-visited
 			if (!(*lpSrc & MARK_VISITED)) {//未访问过的黑点
@@ -268,17 +264,20 @@ std::vector<Hole> ImgProcesor::fillHole(CImage* image){
 					holes.push_back(hole);
 				}
 			}
+
 		}
 	}
-	//edge area back
-	//0xfX--Mark --edge
-	for (int i = 0; i < image->GetHeight(); i++){
-		for (int j = 0; j < image->GetWidth(); j++){
+	
+
+	for (int i = 0; i < image->GetHeight(); i++) {
+		for (int j = 0; j < image->GetWidth(); j++) {
+			//edge area back
+			//0xfX--Mark --edge
 			BYTE* lpSrc = (BYTE*)image->GetPixelAddress(j, i);
 			if (!(*lpSrc & MARKED))//非mark point
 				*lpSrc = 0;//删除访问标志
 			else if (*lpSrc & EDGEPOINT)//if marked & edge
-					*lpSrc = 0;
+				*lpSrc = 0;
 		}
 	}
 	return holes;
@@ -300,33 +299,46 @@ Hole ImgProcesor::processFillHole(CImage* image, int x, int y){
 		//Add new members to stack
 		//Above current pixel
 		lpSrc = (BYTE*)image->GetPixelAddress(x, y);
-		if (y > 0&&y<image->GetHeight()-1&& x > 0 && x < image->GetWidth()-1){
+		//if (y > 0&&y<image->GetHeight()-1&& x > 0 && x < image->GetWidth()-1){
 			//if no-marked & no-visited
-			if (/*y > 0 &&*/ !(*(BYTE*)image->GetPixelAddress(x, y - 1) & MARK_VISITED)) {
+		if (y > 0) {
+			lpSrc = (BYTE*)image->GetPixelAddress(x, y - 1);
+			if (/*y > 0 &&*/ !(*lpSrc & MARK_VISITED)) {
 				s.push({ x, y - 1 });
 				v.push_back({ x, y - 1 });
-				*(BYTE*)image->GetPixelAddress(x, y - 1) |= VISITED;
-			}
-
-			if (/*y<image->GetHeight()-1&&*/!(*(BYTE*)image->GetPixelAddress(x, y + 1) & MARK_VISITED)) {
-				s.push({ x, y + 1 });
-				v.push_back({ x, y + 1 });
-				*(BYTE*)image->GetPixelAddress(x, y + 1) |= VISITED;
-			}
-
-			if (/*x>0&&*/!(*(BYTE*)image->GetPixelAddress(x - 1, y) & MARK_VISITED)) {
-				s.push({ x - 1, y });
-				v.push_back({ x - 1, y });
-				*(BYTE*)image->GetPixelAddress(x - 1, y) |= VISITED;
-			}
-
-			if (/*x<image->GetWidth()-1&&*/!(*(BYTE*)image->GetPixelAddress(x + 1, y) & MARK_VISITED)) {
-				s.push({ x + 1, y });
-				v.push_back({ x + 1, y });
-				*(BYTE*)image->GetPixelAddress(x + 1, y) |= VISITED;
+				*lpSrc |= VISITED;
 			}
 		}
-		else bBorder = true;
+		else  bBorder = true;
+		if (y < image->GetHeight() - 1) {
+			lpSrc = (BYTE*)image->GetPixelAddress(x, y + 1);
+			if (/*y<image->GetHeight()-1&&*/!(*lpSrc & MARK_VISITED)) {
+				s.push({ x, y + 1 });
+				v.push_back({ x, y + 1 });
+				*lpSrc |= VISITED;
+			}
+		}
+		else  bBorder = true;
+		if (x > 0) {
+			lpSrc = (BYTE*)image->GetPixelAddress(x - 1, y);
+			if (/*x>0&&*/!(*lpSrc & MARK_VISITED)) {
+				s.push({ x - 1, y });
+				v.push_back({ x - 1, y });
+				*lpSrc |= VISITED;
+			}
+		}
+		else  bBorder = true;
+		if (x < image->GetWidth() - 1) {
+			lpSrc = (BYTE*)image->GetPixelAddress(x + 1, y);
+			if (/*x<image->GetWidth()-1&&*/!(*lpSrc & MARK_VISITED)) {
+				s.push({ x + 1, y });
+				v.push_back({ x + 1, y });
+				*lpSrc |= VISITED;
+			}
+		}
+		else  bBorder = true;
+		//}
+		//else bBorder = true;
 		//Retrieve current stack member
 		x = s.top().x;
 		y = s.top().y;
@@ -337,7 +349,9 @@ Hole ImgProcesor::processFillHole(CImage* image, int x, int y){
 			lpSrc = (BYTE*)image->GetPixelAddress(v[k].x, v[k].y);
 			*lpSrc |= MARKED;
 		}
-		return { x,y,v.size() };
+		if (v.size() > 50) {
+			return { x,y,v.size() };
+		}
 	}
 	return { -1,-1,0 };
 }

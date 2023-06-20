@@ -72,7 +72,7 @@ void StatisticsDlg::SetImage(CImage* image)
 	pDC->MoveTo(0, 0);
 	int yGap = 120;
 	CPen penH(PS_SOLID, 1.5, RGB(255, 0, 0));
-	CPen penS(PS_SOLID, 1.5, RGB(0, 255, 0));
+	CPen penS(PS_SOLID, 1.5, RGB(0, 200, 0));
 	CPen penI(PS_SOLID, 1.5, RGB(0, 0, 255));
 
 	const int deltaX = 2;

@@ -264,9 +264,11 @@ void CCellProjectView::OnMouseMove(UINT nFlags, CPoint point)
 void CCellProjectView::OnRecoverImage()
 {
 	PrepareProcessing();
+	points.clear();
 	CCellProjectDoc* pDoc = GetDocument();
 	if (pDoc->image != nullptr) {
 		delete pDoc->image;
+		pDoc->image = nullptr;
 	}
 	pDoc->image = new CImage;
 	ImgProcesor::copyImage(*backup, *pDoc->image);
@@ -464,9 +466,14 @@ void CCellProjectView::OnCountAll()
 	}
 	//复位图像
 	ImgProcesor::copyImage(*backup, *image);
-	CCellProjectView::OnDraw(GetDC());
-	//绘制细胞
 	CDC* pdc = GetDC();
+	//清理的更加干净
+	CRect rectDlg;
+	GetClientRect(rectDlg);			// 获得窗体的大小
+	int pointWidth = rectDlg.Width();		// 获取窗体宽度
+	int pointHeight = rectDlg.Height();		// 获取窗体高度
+	RedrawWindow(CRect(0, 0, pointWidth, pointHeight));		// 重绘指定区域
+	//绘制细胞
 	pdc->SelectObject(Redpen);
 	double averageRadius = 0.0;
 	double averageS = 0.0;
@@ -638,7 +645,10 @@ void CCellProjectView::OnUpdateRemoveAllPotentialErrorsUI(CCmdUI* pCmdUI)
 
 void CCellProjectView::OnUpdateCountAllUI(CCmdUI* pCmdUI)
 {
-	StepGroup(pCmdUI, 6);
+	if (!points.empty() && image != nullptr) {
+		pCmdUI->Enable();
+	}
+	else pCmdUI->Enable(false);
 }
 
 
