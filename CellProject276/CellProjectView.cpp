@@ -17,7 +17,7 @@
 #define new DEBUG_NEW
 #endif
 
-#include "ImgProcesor.h"
+#include "ImgProcessor.h"
 #include "MainFrm.h"
 // CCellProjectView
 
@@ -88,7 +88,7 @@ CCellProjectView::~CCellProjectView()
 		delete backup;
 		backup = nullptr;
 	}
-	image = nullptr;
+	//image = nullptr;
 }
 
 BOOL CCellProjectView::PreCreateWindow(CREATESTRUCT& cs)
@@ -126,7 +126,7 @@ void CCellProjectView::OnDraw(CDC* pDC)
 		end_point.x = image->GetWidth();
 		end_point.y = image->GetHeight();
 		start_point.x = 0; start_point.y = 0;
-		ImgProcesor::copyImage(*image, *backup);
+		ImgProcessor::copyImage(*image, *backup);
 		have_read_document = true;
 
 
@@ -212,7 +212,7 @@ void CCellProjectView::OnFileOpen()
 			}
 			image = pDoc->image;
 			backup = new CImage;
-			ImgProcesor::copyImage(*image,*backup);
+			ImgProcessor::copyImage(*image,*backup);
 			Invalidate(true);
 		}
 }
@@ -264,14 +264,14 @@ void CCellProjectView::OnMouseMove(UINT nFlags, CPoint point)
 void CCellProjectView::OnRecoverImage()
 {
 	PrepareProcessing();
-	points.clear();
+	//points.clear();
 	CCellProjectDoc* pDoc = GetDocument();
 	if (pDoc->image != nullptr) {
 		delete pDoc->image;
 		pDoc->image = nullptr;
 	}
 	pDoc->image = new CImage;
-	ImgProcesor::copyImage(*backup, *pDoc->image);
+	ImgProcessor::copyImage(*backup, *pDoc->image);
 	image = pDoc->image;
 	Invalidate(true);
 	step = 0;
@@ -280,14 +280,14 @@ void CCellProjectView::OnRecoverImage()
 void CCellProjectView::OnCellDetect()
 {
 	PrepareProcessing();
-	ImgProcesor::markCell(image, start_point, end_point);
+	ImgProcessor::markCell(image, start_point, end_point);
 	Invalidate(true);
 	step = 1;
 }
 
 void CCellProjectView::OnMaybeMark2Mark(){
 	PrepareProcessing();
-	ImgProcesor::maybemark2mark(image);
+	ImgProcessor::maybemark2mark(image);
 	Invalidate(true);
 	step = 2;
 }
@@ -296,7 +296,7 @@ void CCellProjectView::OnMaybeMark2Mark(){
 void CCellProjectView::OnGetEdgeInfomation()
 {
 	PrepareProcessing();
-	ImgProcesor::getEdgeInfomation(image, backup);
+	ImgProcessor::getEdgeInfomation(image, backup);
 	Invalidate(true);
 	step = 3;
 }
@@ -305,7 +305,7 @@ void CCellProjectView::OnGetEdgeInfomation()
 void CCellProjectView::OnTwoValue()
 {
 	PrepareProcessing();
-	ImgProcesor::twovalue(&image);
+	ImgProcessor::twovalue(&image);
 	GetDocument()->image = image;
 	Invalidate(true);
 	step = 4;
@@ -314,7 +314,7 @@ void CCellProjectView::OnTwoValue()
 void CCellProjectView::OnFillHole()
 {
 	PrepareProcessing();
-	ImgProcesor::fillHole(image);
+	ImgProcessor::fillHole(image);
 	Invalidate();
 	step = 5;
 }
@@ -323,16 +323,16 @@ void CCellProjectView::OnFillHole()
 void CCellProjectView::OnShrink()
 {
 	PrepareProcessing();
-	ImgProcesor::shrink(image);
+	ImgProcessor::shrink(image);
 	Invalidate();
 	step = 6;
 }
 
 void CCellProjectView::OnCalCenterPoints() {
 	CImage bkp;
-	ImgProcesor::copyImage(*image, bkp);
-	auto points = ImgProcesor::calCenter(image);
-	ImgProcesor::copyImage(bkp, *image);
+	ImgProcessor::copyImage(*image, bkp);
+	auto points = ImgProcessor::calCenter(image);
+	ImgProcessor::copyImage(bkp, *image);
 	CString msg;
 	msg.Format(L"获得的中心点数目= %d", points.size());
 	MessageBox(msg);
@@ -342,9 +342,9 @@ void CCellProjectView::OnCalCenterPoints() {
 void CCellProjectView::OnCalCenterWithAverage()
 {
 	CImage bkp;
-	ImgProcesor::copyImage(*image, bkp);
-	auto points = ImgProcesor::calCenterWithAverage(image);
-	ImgProcesor::copyImage(bkp, *image);
+	ImgProcessor::copyImage(*image, bkp);
+	auto points = ImgProcessor::calCenterWithAverage(image);
+	ImgProcessor::copyImage(bkp, *image);
 	CString msg;
 	msg.Format(L"取平均值，获得的中心点数目= %d", points.size());
 	MessageBox(msg);
@@ -355,9 +355,9 @@ void CCellProjectView::OnCalCenterWithAverage()
 void CCellProjectView::OnCalCenterPointsWithAverageSimilar()
 {
 	CImage bkp;
-	ImgProcesor::copyImage(*image, bkp);
-	auto points = ImgProcesor::calCenterWithAverage(image,GetDC(),Redpen,Greenpen);
-	ImgProcesor::copyImage(bkp, *image);
+	ImgProcessor::copyImage(*image, bkp);
+	auto points = ImgProcessor::calCenterWithAverage(image,GetDC(),Redpen,Greenpen);
+	ImgProcessor::copyImage(bkp, *image);
 	CString msg;
 	msg.Format(L"平均化相近的中心点后数目= %d", points.size());
 	MessageBox(msg);
@@ -367,11 +367,11 @@ void CCellProjectView::OnRemoveIncludedCircles()
 {
 	CCellProjectView::OnDraw(GetDC());
 	CImage bkp;
-	ImgProcesor::copyImage(*image, bkp);
-	auto points = ImgProcesor::calCenterWithAverage(image, GetDC(),Redpen,Greenpen);
-	ImgProcesor::copyImage(bkp, *image);
+	ImgProcessor::copyImage(*image, bkp);
+	auto points = ImgProcessor::calCenterWithAverage(image, GetDC(),Redpen,Greenpen);
+	ImgProcessor::copyImage(bkp, *image);
 	int size1 = points.size();
-	ImgProcesor::removeIncludedCircles(points, GetDC(),Bluepen1);
+	ImgProcessor::removeIncludedCircles(points, GetDC(),Bluepen1);
 	int size2 = points.size();
 	CString msg;
 	if (size2 != size1) {
@@ -389,12 +389,12 @@ void CCellProjectView::OnRemovePotentialErrors()
 	CCellProjectView::OnDraw(GetDC());
 
 	CImage bkp;
-	ImgProcesor::copyImage(*image, bkp);
-	auto points = ImgProcesor::calCenterWithAverage(image, GetDC(), Redpen, Greenpen);
+	ImgProcessor::copyImage(*image, bkp);
+	auto points = ImgProcessor::calCenterWithAverage(image, GetDC(), Redpen, Greenpen);
 	int size1 = points.size();
-	ImgProcesor::removePoentialErrors(image,points, GetDC(),Redpen1);
+	ImgProcessor::removePoentialErrors(image,points, GetDC(),Redpen1);
 
-	ImgProcesor::copyImage(bkp, *image);
+	ImgProcessor::copyImage(bkp, *image);
 	int size2 = points.size();
 	CString msg;
 	if (size2 != size1) {
@@ -411,12 +411,12 @@ void CCellProjectView::OnRemovePotentialErrorsIntersection()
 	CCellProjectView::OnDraw(GetDC());
 
 	CImage bkp;
-	ImgProcesor::copyImage(*image, bkp);
-	auto points = ImgProcesor::calCenterWithAverage(image, GetDC(), Redpen, Greenpen);
-	//ImgProcesor::removePoentialErrors(image, points);
+	ImgProcessor::copyImage(*image, bkp);
+	auto points = ImgProcessor::calCenterWithAverage(image, GetDC(), Redpen, Greenpen);
+	//ImgProcessor::removePoentialErrors(image, points);
 	int size1 = points.size();
-	ImgProcesor::removePotentialErrorsIntersection(image, points, GetDC(),Bluepen1);
-	ImgProcesor::copyImage(bkp, *image);
+	ImgProcessor::removePotentialErrorsIntersection(image, points, GetDC(),Bluepen1);
+	ImgProcessor::copyImage(bkp, *image);
 	int size2 = points.size();
 	CString msg;
 	if (size2 != size1) {
@@ -434,16 +434,16 @@ void CCellProjectView::OnRemoveAllPotentialErrors()
 	CCellProjectView::OnDraw(GetDC());
 
 	CImage bkp;
-	ImgProcesor::copyImage(*image, bkp);
-	auto points = ImgProcesor::calCenterWithAverage(image, GetDC(), Redpen, Greenpen);
+	ImgProcessor::copyImage(*image, bkp);
+	auto points = ImgProcessor::calCenterWithAverage(image, GetDC(), Redpen, Greenpen);
 	int size1 = points.size();
-	ImgProcesor::removeIncludedCircles(points, GetDC(), Bluepen1);
+	ImgProcessor::removeIncludedCircles(points, GetDC(), Bluepen1);
 
-	ImgProcesor::removePoentialErrors(image, points, GetDC(), Redpen1);
+	ImgProcessor::removePoentialErrors(image, points, GetDC(), Redpen1);
 
-	ImgProcesor::removePotentialErrorsIntersection(image, points, GetDC(), Bluepen1);
+	ImgProcessor::removePotentialErrorsIntersection(image, points, GetDC(), Bluepen1);
 
-	ImgProcesor::copyImage(bkp, *image);
+	ImgProcessor::copyImage(bkp, *image);
 
 	int size2 = points.size();
 	this->points.swap(points);
@@ -465,7 +465,8 @@ void CCellProjectView::OnCountAll()
 		return;
 	}
 	//复位图像
-	ImgProcesor::copyImage(*backup, *image);
+	OnRecoverImage();
+	//ImgProcessor::copyImage(*backup, *image);
 	CDC* pdc = GetDC();
 	//清理的更加干净
 	CRect rectDlg;
@@ -500,20 +501,21 @@ void CCellProjectView::OnCountAll()
 void CCellProjectView::OnAllSteps()
 {
 	PrepareProcessing();
-	ImgProcesor::copyImage(*backup, *image);
+	OnRecoverImage();
 	MessageBox(L"Step1:Mark");
-	ImgProcesor::markCell(image, start_point, end_point);
+	ImgProcessor::markCell(image, start_point, end_point);
 	CCellProjectView::OnDraw(GetDC());
 	MessageBox(L"Mark(Red)& maybe Mark(Blue)");
-	ImgProcesor::maybemark2mark(image);
-	ImgProcesor::getEdgeInfomation(image, backup);
+	ImgProcessor::maybemark2mark(image);
+	ImgProcessor::getEdgeInfomation(image, backup);
 	CCellProjectView::OnDraw(GetDC());
 	MessageBox(L"maybe Mark to Mark(Bright Red(128,0,0))");
 	MessageBox(L"Step2:TwoValue");
-	ImgProcesor::twovalue(&image);
+	ImgProcessor::twovalue(&image);
+	GetDocument()->image = image;
 	CCellProjectView::OnDraw(GetDC());
 	MessageBox(L"Step3:FillHoles");
-	auto holes = ImgProcesor::fillHole(image);
+	auto holes = ImgProcessor::fillHole(image);
 	CCellProjectView::OnDraw(GetDC());
 	CString msg;
 	for (auto hole : holes) {
@@ -524,38 +526,39 @@ void CCellProjectView::OnAllSteps()
 	CCellProjectView::OnDraw(GetDC());
 	MessageBox(msg);
 	MessageBox(L"Step4:Shrink");
-	ImgProcesor::shrink(image);
+	ImgProcessor::shrink(image);
 	CCellProjectView::OnDraw(GetDC());
 	MessageBox(L"Step5:FindCenter");
 	CImage bak1;
 	CImage bak2;
 	CImage bak3;
-	ImgProcesor::copyImage(*image, bak1);
-	ImgProcesor::copyImage(*image, bak2);
-	ImgProcesor::copyImage(*image, bak3);
-	auto centerpoints1 = ImgProcesor::calCenter(&bak1);
+	ImgProcessor::copyImage(*image, bak1);
+	ImgProcessor::copyImage(*image, bak2);
+	ImgProcessor::copyImage(*image, bak3);
+	auto centerpoints1 = ImgProcessor::calCenter(&bak1);
 	msg.Format(L"获得中心点数目:%d", centerpoints1.size());
 	MessageBox(msg);
-	auto centerpoints2 = ImgProcesor::calCenterWithAverage(&bak2);
+	auto centerpoints2 = ImgProcessor::calCenterWithAverage(&bak2);
 	msg.Format(L"取平均值，获取中心点数目:%d", centerpoints2.size());
 	MessageBox(msg);
-	auto centerpoints3 = ImgProcesor::calCenterWithAverage(&bak3,GetDC(), Redpen, Greenpen);
+	auto centerpoints3 = ImgProcessor::calCenterWithAverage(&bak3,GetDC(), Redpen, Greenpen);
 	msg.Format(L"平均化相近的中心点后，获取中心点数目:%d", centerpoints3.size());
 	MessageBox(msg);
 	//去除误差
-	ImgProcesor::removeIncludedCircles(centerpoints3, GetDC(), Bluepen1);
+	ImgProcessor::removeIncludedCircles(centerpoints3, GetDC(), Bluepen1);
 	msg.Format(L"去除包含的误差后中心点数目:%d", centerpoints3.size());
 	MessageBox(msg);
 
-	ImgProcesor::removePoentialErrors(image, centerpoints3, GetDC(), Redpen1);
+	ImgProcessor::removePoentialErrors(image, centerpoints3, GetDC(), Redpen1);
 	msg.Format(L"去除小半径（r<8)后的中心点数目:%d", centerpoints3.size());
 	MessageBox(msg);
 
-	ImgProcesor::removePotentialErrorsIntersection(image, centerpoints3, GetDC(), Bluepen1);
+	ImgProcessor::removePotentialErrorsIntersection(image, centerpoints3, GetDC(), Bluepen1);
 	msg.Format(L"去除潜在相交错误后中心点数目:%d", centerpoints3.size());
 	MessageBox(msg);
 	MessageBox(L"Step6:Count");
-	points = centerpoints3;
+	this->points.clear();
+	this->points.assign(centerpoints3.begin(), centerpoints3.end());
 	OnCountAll();
 }
 

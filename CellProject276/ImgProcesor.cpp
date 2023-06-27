@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "ImgProcesor.h"
+#include "ImgProcessor.h"
 #include <math.h>
 #include <stack>
 #include <vector>
@@ -32,15 +32,15 @@ HSI::HSI(const Rgb& rgb) {
 	H = (B > G) ? 360.0 - angle : angle;
 }
 
-//bool ImgProcesor::m_bFullEdge = false;
-long ImgProcesor::tot_area = 0; 
-long ImgProcesor::tot_x = 0; 
-long ImgProcesor::tot_y = 0;
-long ImgProcesor::max_radius = 0;		// 用于递归
+//bool ImgProcessor::m_bFullEdge = false;
+long ImgProcessor::tot_area = 0; 
+long ImgProcessor::tot_x = 0; 
+long ImgProcessor::tot_y = 0;
+long ImgProcessor::max_radius = 0;		// 用于递归
 
 
 
-bool ImgProcesor::copyImage(const CImage& srcImage, CImage& destImage){
+bool ImgProcessor::copyImage(const CImage& srcImage, CImage& destImage){
 	int i;//循环变量
 	if (srcImage.IsNull())
 		return FALSE;
@@ -82,7 +82,7 @@ bool ImgProcesor::copyImage(const CImage& srcImage, CImage& destImage){
 }
 
 
-void ImgProcesor::markCell(CImage* image, CPoint start, CPoint end) {
+void ImgProcessor::markCell(CImage* image, CPoint start, CPoint end) {
 
 	constexpr double meanH = 210.0 * 360 / 255;
 	constexpr double meanS = 55.0 / 255;
@@ -129,7 +129,7 @@ void ImgProcesor::markCell(CImage* image, CPoint start, CPoint end) {
 }
 
 
-void ImgProcesor::maybemark2mark(CImage* image) {
+void ImgProcessor::maybemark2mark(CImage* image) {
 	bool MarkChg = true;//是否有需要改变的点
 	while (MarkChg) {
 		MarkChg = false;
@@ -152,7 +152,7 @@ void ImgProcesor::maybemark2mark(CImage* image) {
 	}
 }
 
-void ImgProcesor::getEdgeInfomation(CImage* image, const CImage* originImage) {
+void ImgProcessor::getEdgeInfomation(CImage* image, const CImage* originImage) {
 	const int edgeDoor = 45;
 	CImage oriImg;
 	copyImage(*originImage, oriImg);
@@ -193,7 +193,7 @@ void ImgProcesor::getEdgeInfomation(CImage* image, const CImage* originImage) {
 				for (int m = -M; m <= M; m++)
 					for (int n = -M; n <= M; n++) {
 						if (m == -M || m == M || n == -M || n == M) {
-							auto lpDst1 = (BYTE*)image->GetPixelAddress(j+n, i-m);
+							auto lpDst1 = (BYTE*)image->GetPixelAddress(j+n, i+m);
 							//noMark && no Edge
 							if (*(lpDst1)|| (*(lpDst1 + 1) == 255)) {
 								bdelete = false;
@@ -209,7 +209,7 @@ void ImgProcesor::getEdgeInfomation(CImage* image, const CImage* originImage) {
 }
 
 
-void ImgProcesor::twovalue(CImage** image) {
+void ImgProcessor::twovalue(CImage** image) {
 	// 保存新图像
 	CImage* newImage = new CImage;
 	newImage->Create((*image)->GetWidth(), (*image)->GetHeight(), 8);
@@ -248,7 +248,7 @@ void ImgProcesor::twovalue(CImage** image) {
 }
 
 
-std::vector<Hole> ImgProcesor::fillHole(CImage* image){
+std::vector<Hole> ImgProcessor::fillHole(CImage* image){
 	//0x7X---edge
 	//0x8X---Mark--not edge
 	//0xfX--Mark --edge
@@ -285,7 +285,7 @@ std::vector<Hole> ImgProcesor::fillHole(CImage* image){
 
 
 
-Hole ImgProcesor::processFillHole(CImage* image, int x, int y){
+Hole ImgProcessor::processFillHole(CImage* image, int x, int y){
 	using namespace std;
 	stack<CPoint> s;
 	vector<CPoint> v;//v save for fill holes
@@ -345,8 +345,8 @@ Hole ImgProcesor::processFillHole(CImage* image, int x, int y){
 		s.pop();
 	}
 	if (v.size() < MAX_HOLE && !bBorder){
-		for (UINT k = 0; k < v.size(); k++) {
-			lpSrc = (BYTE*)image->GetPixelAddress(v[k].x, v[k].y);
+		for (auto p : v) {
+			lpSrc = (BYTE*)image->GetPixelAddress(p.x, p.y);
 			*lpSrc |= MARKED;
 		}
 		if (v.size() > 50) {
@@ -359,7 +359,7 @@ Hole ImgProcesor::processFillHole(CImage* image, int x, int y){
 
 
 
-void ImgProcesor::shrink(CImage* image){
+void ImgProcessor::shrink(CImage* image){
 	const int pre_shrink_count = 3;
 	// 先去掉pre_shrink_count层皮
 	genEdge8(image);
@@ -376,7 +376,7 @@ void ImgProcesor::shrink(CImage* image){
 	}
 }
 
-void ImgProcesor::genEdge8(CImage* image){
+void ImgProcessor::genEdge8(CImage* image){
 	for (int j = 0; j < image->GetHeight(); j++){
 		for (int i = 0; i < image->GetWidth(); i++){
 			BYTE* lpSrc = (BYTE*)image->GetPixelAddress(i,j);
@@ -400,7 +400,7 @@ void ImgProcesor::genEdge8(CImage* image){
 	}
 }
 
-void ImgProcesor::genEdge4(CImage* image){
+void ImgProcessor::genEdge4(CImage* image){
 	for (int j = 0; j < image->GetHeight(); j++) {
 		for (int i = 0; i < image->GetWidth(); i++) {
 			BYTE* lpSrc = (BYTE*)image->GetPixelAddress(i, j);
@@ -422,7 +422,7 @@ void ImgProcesor::genEdge4(CImage* image){
 
 
 
-std::vector<CenterPoint> ImgProcesor::calCenter(CImage* image){
+std::vector<CenterPoint> ImgProcessor::calCenter(CImage* image){
 	using namespace std;
 	vector<CenterPoint> points_temp;
 	bool changed = true;
@@ -488,7 +488,7 @@ std::vector<CenterPoint> ImgProcesor::calCenter(CImage* image){
 }
 
 
-std::vector<CenterPoint> ImgProcesor::calCenterWithAverage(CImage* image, CDC* pdc, CPen* Redpen,CPen* Greenpen) {
+std::vector<CenterPoint> ImgProcessor::calCenterWithAverage(CImage* image, CDC* pdc, CPen* Redpen,CPen* Greenpen) {
 	// 取平均值,获得中心点
 	using namespace std;
 	auto points_temp = calCenter(image);
@@ -599,7 +599,7 @@ std::vector<CenterPoint> ImgProcesor::calCenterWithAverage(CImage* image, CDC* p
 }
 
 
-bool ImgProcesor::isNeedToSave(CImage* image, int i, int j)
+bool ImgProcessor::isNeedToSave(CImage* image, int i, int j)
 {
 	bool res = true;
 	BYTE* lpSrc = (BYTE*)image->GetPixelAddress(i, j);
@@ -674,7 +674,7 @@ bool ImgProcesor::isNeedToSave(CImage* image, int i, int j)
 	return res;
 }
 
-void ImgProcesor::saveIt(CImage* image, std::vector<CenterPoint>& points_temp, int i, int j, int radius)
+void ImgProcessor::saveIt(CImage* image, std::vector<CenterPoint>& points_temp, int i, int j, int radius)
 {
 	using namespace std;
 	BYTE* lpSrc = (BYTE*)image->GetPixelAddress(i,j);
@@ -713,7 +713,7 @@ void ImgProcesor::saveIt(CImage* image, std::vector<CenterPoint>& points_temp, i
 	}
 }
 
-void ImgProcesor::calCenterArea(CImage* image,std::vector<CenterPoint>& points_temp, int i, int j){
+void ImgProcessor::calCenterArea(CImage* image,std::vector<CenterPoint>& points_temp, int i, int j){
 	BYTE* lpSrc = (BYTE*)image->GetPixelAddress(i,j);
 	if (j == 0 || j == image->GetHeight()-1 || i == 0 || i == image->GetWidth()-1){ // 最边上的不用处理
 		return;
@@ -757,7 +757,7 @@ void ImgProcesor::calCenterArea(CImage* image,std::vector<CenterPoint>& points_t
 
 
 
-void ImgProcesor::removeIncludedCircles(std::vector<CenterPoint>& centerPoints, CDC* pdc, CPen* Bluepen1){
+void ImgProcessor::removeIncludedCircles(std::vector<CenterPoint>& centerPoints, CDC* pdc, CPen* Bluepen1){
 	int r;
 	// 去掉被包含的圆
 	//Blue 相近- delete
@@ -801,7 +801,7 @@ void ImgProcesor::removeIncludedCircles(std::vector<CenterPoint>& centerPoints, 
 }
 
 
-void ImgProcesor::removePoentialErrors(const CImage*image,std::vector<CenterPoint>& centerPoints, CDC* pdc,CPen*	Redpen1) {
+void ImgProcessor::removePoentialErrors(const CImage*image,std::vector<CenterPoint>& centerPoints, CDC* pdc,CPen*	Redpen1) {
 	std::vector<CenterPoint> tocheck;
 	if(pdc!=nullptr)
 		pdc->SelectObject(Redpen1);
@@ -836,7 +836,7 @@ void ImgProcesor::removePoentialErrors(const CImage*image,std::vector<CenterPoin
 	}
 }
 
-void ImgProcesor::removePotentialErrorsIntersection(const CImage*image,std::vector<CenterPoint>& centerPoints, CDC* pdc, CPen* Bluepen1){
+void ImgProcessor::removePotentialErrorsIntersection(const CImage*image,std::vector<CenterPoint>& centerPoints, CDC* pdc, CPen* Bluepen1){
 
 	pdc->SelectObject(Bluepen1);
 	std::vector<CenterPoint> tocheck;

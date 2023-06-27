@@ -39,7 +39,7 @@
     <ClInclude Include="pch.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ImgProcesor.h">
+    <ClInclude Include="ImgProcessor.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="StatisticsDlg.h">

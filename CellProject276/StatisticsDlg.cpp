@@ -5,7 +5,7 @@
 #include "CellProject.h"
 #include "afxdialogex.h"
 #include "StatisticsDlg.h"
-#include "ImgProcesor.h"
+#include "ImgProcessor.h"
 // StatisticsDlg 对话框
 
 IMPLEMENT_DYNAMIC(StatisticsDlg, CDialogEx)

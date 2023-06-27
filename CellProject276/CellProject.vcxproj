@@ -187,7 +187,7 @@
     <ClInclude Include="CellProjectDoc.h" />
     <ClInclude Include="CellProjectView.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="ImgProcesor.h" />
+    <ClInclude Include="ImgProcessor.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />

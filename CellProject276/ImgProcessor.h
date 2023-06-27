@@ -37,7 +37,7 @@ struct CenterPoint
 	int radius;
 };
 
-class ImgProcesor
+class ImgProcessor
 {
 public:
 	static const unsigned char MARK_VISITED = 0x81;

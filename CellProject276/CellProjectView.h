@@ -4,7 +4,7 @@
 
 #pragma once
 #include <vector>
-#include "ImgProcesor.h"
+#include "ImgProcessor.h"
 class CCellProjectView : public CView
 {
 private:
